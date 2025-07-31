@@ -16,7 +16,7 @@ class Program
             return;
         }
 
-        string logPath = "SysWatchProcessLogs.log";
+        string logPath = "../logs/SysWatchProcessLogs.log";
         using StreamWriter logFile = new StreamWriter(logPath, append: true);
 
         using (var session = new TraceEventSession("SysWatchSession"))
