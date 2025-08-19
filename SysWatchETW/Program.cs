@@ -129,13 +129,18 @@ class Program
     {
         foreach (var filter in filters)
         {
-            if (filter.EventType != null && !record.EventType.Equals(filter.EventType, StringComparison.OrdinalIgnoreCase))
+            if (filter.EventType != null &&
+                !string.Equals(record.EventType, filter.EventType, StringComparison.OrdinalIgnoreCase))
                 continue;
 
-            if (filter.ProcessName != null && !record.ProcessName.Contains(filter.ProcessName, StringComparison.OrdinalIgnoreCase))
+            if (filter.ProcessName != null &&
+                (record.ProcessName == null ||
+                !record.ProcessName.Contains(filter.ProcessName, StringComparison.OrdinalIgnoreCase)))
                 continue;
 
-            if (filter.FilePath != null && (record.FilePath == null || !record.FilePath.Contains(filter.FilePath, StringComparison.OrdinalIgnoreCase)))
+            if (filter.FilePath != null &&
+                (record.FilePath == null ||
+                !record.FilePath.Contains(filter.FilePath, StringComparison.OrdinalIgnoreCase)))
                 continue;
 
             return true; // passed one filter
@@ -148,17 +153,17 @@ class Program
 class SysEvent
 {
     public DateTime Timestamp { get; set; }
-    public string EventType { get; set; }
-    public string ProcessName { get; set; }
+    public string? EventType { get; set; }
+    public string? ProcessName { get; set; }
     public int Pid { get; set; }
-    public string FilePath { get; set; }
-    public Dictionary<string, object> Extra { get; set; }
+    public string? FilePath { get; set; }
+    public Dictionary<string, object>? Extra { get; set; }
 }
 
 // JSON schema for filters
 class FilterRule
 {
-    public string EventType { get; set; }
-    public string ProcessName { get; set; }
-    public string FilePath { get; set; }
+    public string? EventType { get; set; }
+    public string? ProcessName { get; set; }
+    public string? FilePath { get; set; }
 }

@@ -8,6 +8,16 @@ const logFilePath = path.resolve(__dirname, "../logs/SysWatch.jsonl");
 const wss = new WebSocketServer({port:8080});
 console.log("WebSocket server running on ws://localhost:8080");
 
+const historyBuffer = [];
+const MAX_HISTORY=100;
+
+function addToHistory(log){
+  historyBuffer.push(log);
+  if(historyBuffer.length>MAX_HISTORY){
+    historyBuffer.shift()
+  }
+}
+
 function tailFile(filePath, onLine) {
   let fileSize = 0;
   // Poll for changes every second
@@ -41,10 +51,13 @@ function tailFile(filePath, onLine) {
 }
 wss.on("connection", (ws) => {
   console.log("Client connected");
+    if(ws.readyState===ws.OPEN){
+      ws.send(JSON.stringify(historyBuffer))
+    }
   tailFile(logFilePath, (jsonLine) => {
+    addToHistory(jsonLine)
     if (ws.readyState === ws.OPEN) {
       ws.send(JSON.stringify(jsonLine));
-      console.log(jsonLine)
     }
   });
   ws.on("close", () => {

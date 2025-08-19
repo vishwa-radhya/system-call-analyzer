@@ -1,10 +1,16 @@
+import { Route, Routes } from "react-router-dom"
 import LogsViewer from "./components/LogsViewer"
+import { Fragment } from "react"
+import Home from "./routes/home.route"
+
 function App() {
 
   return (
-    <>
-    <LogsViewer/>
-    </>
+    <Fragment>
+      <Routes>
+        <Route path="/" element={<Home/>} />
+      </Routes>
+    </Fragment>
   )
 }
 

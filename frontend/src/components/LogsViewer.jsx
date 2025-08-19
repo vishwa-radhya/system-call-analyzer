@@ -7,9 +7,16 @@ export default function LogsViewer() {
     const ws = new WebSocket("ws://localhost:8080");
 
     ws.onmessage = (event) => {
-      const log = JSON.parse(event.data);
-      console.log(event.data)
-      setLogs((prev) => [...prev, log]); 
+      try{
+        const data = JSON.parse(event.data);
+        if(Array.isArray(data)){
+          setLogs(prev=>[...prev,...data.reverse()])
+        }else{
+          setLogs(prev=>[data,...prev])
+        }
+      }catch(err){  
+        console.error("invalid ws message:",event.data,err)
+      }
     };
 
     ws.onopen = () => console.log("Connected to SysWatch backend");
