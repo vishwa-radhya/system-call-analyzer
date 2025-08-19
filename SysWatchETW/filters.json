@@ -1,0 +1,5 @@
+[{
+  "includePaths": ["C:\\Users", "C:\\Projects"],
+  "excludePaths": ["C:\\Windows", "C:\\Program Files"],
+  "eventTypes": ["ProcessStart", "ProcessStop","FileIO"]
+}]

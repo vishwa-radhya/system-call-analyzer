@@ -67,4 +67,4 @@ indicating process start with [+] and stop with [-]
 [FileIO] SysWatchETW -> C:\Program Files\dotnet\shared\Microsoft.NETCore.App\8.0.18\System.Text.Encoding.Extensions.dll
 [FileIO] SysWatchETW -> C:\Program Files\dotnet\shared\Microsoft.NETCore.App\8.0.18\System.Text.Encoding.Extensions.dll
 ```
-> ISSUE some process stop (almost every) has no names and data is unstructures for the node js backend to parse and send to frontend
+> ISSUE some process stops (almost every) has no names and data is unstructured for the node js backend to parse and send to frontend

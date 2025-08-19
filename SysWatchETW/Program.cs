@@ -1,97 +1,164 @@
 ﻿using System;
 using System.IO;
+using System.Text.Json;
 using System.Collections.Generic;
-using System.Linq;
 using Microsoft.Diagnostics.Tracing;
 using Microsoft.Diagnostics.Tracing.Parsers;
-using Microsoft.Diagnostics.Tracing.Parsers.Kernel;
 using Microsoft.Diagnostics.Tracing.Session;
 
-class ProgramWatch
+class Program
 {
-    static List<string> monitoredPaths = new List<string>();
-
-    static void Main()
+    static void Main(string[] args)
     {
-        if (!(TraceEventSession.IsElevated() ?? false))
-        {
-            Console.WriteLine("Please run as Administrator.");
-            return;
-        }
+        string projectRoot = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", ".."));
+        string logsDir = Path.Combine(projectRoot,"logs");
+        Directory.CreateDirectory(logsDir);
+        string logFile = Path.Combine(logsDir, "SysWatch.jsonl");
+        string filtersFile = "filters.json"; 
 
-        LoadMonitoredPaths();
+        Console.WriteLine($"[SysWatch] Starting ETW session...");
+        Console.WriteLine($"[SysWatch] Logs -> {logFile}");
+        Console.WriteLine($"[SysWatch] Filters -> {filtersFile}");
 
-        string logPath = "../logs/SysWatchProcessLogs.log";
-        using StreamWriter logFile = new StreamWriter(logPath, append: true);
+        var filters = LoadFilters(filtersFile);
 
+        // Open log stream for appending JSONL
+        using var logStream = new StreamWriter(logFile, append: true);
+
+        // Start ETW session
         using (var session = new TraceEventSession("SysWatchSession"))
         {
-            Console.CancelKeyPress += (s, e) => session.Dispose();
+            session.EnableKernelProvider(KernelTraceEventParser.Keywords.Process | KernelTraceEventParser.Keywords.FileIO);
 
-            session.EnableKernelProvider(
-                KernelTraceEventParser.Keywords.Process |
-                KernelTraceEventParser.Keywords.FileIOInit
-            );
-
-            var pidMap = new Dictionary<int, string>();
-
-            void WriteLog(string type, string message)
+            session.Source.Kernel.ProcessStart += data =>
             {
-                string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-                string logEntry = $"[{timestamp}] [{type}] {message}";
-                Console.WriteLine(logEntry);
-                logFile.WriteLine(logEntry);
-                logFile.Flush();
-            }
-
-            session.Source.Kernel.ProcessStart += (proc) =>
-            {
-                pidMap[proc.ProcessID] = proc.ProcessName;
-                WriteLog("ProcessStart", $"{proc.ProcessName} (PID: {proc.ProcessID})");
-            };
-
-            session.Source.Kernel.ProcessStop += (proc) =>
-            {
-                string name = string.IsNullOrEmpty(proc.ProcessName) && pidMap.ContainsKey(proc.ProcessID)
-                    ? pidMap[proc.ProcessID]
-                    : proc.ProcessName;
-
-                WriteLog("ProcessStop", $"{name} (PID: {proc.ProcessID})");
-                pidMap.Remove(proc.ProcessID);
-            };
-
-            session.Source.Kernel.FileIOCreate += (file) =>
-            {
-                string filePath = file.FileName;
-                if (string.IsNullOrEmpty(filePath)) return;
-
-                if (monitoredPaths.Any(path => filePath.StartsWith(path, StringComparison.OrdinalIgnoreCase)))
+                var record = new SysEvent
                 {
-                    WriteLog("FileIO", $"{file.ProcessName} (PID: {file.ProcessID}) -> {filePath}");
+                    Timestamp = data.TimeStamp,
+                    EventType = "ProcessStart",
+                    ProcessName = data.ProcessName,
+                    Pid = data.ProcessID,
+                    Extra = new Dictionary<string, object>
+                    {
+                        {"ParentPid", data.ParentID},
+                        {"ImageFileName", data.ImageFileName}
+                    }
+                };
+
+                if (PassesFilters(record, filters))
+                {
+                    WriteJsonRecord(logStream, record);
                 }
             };
 
-            Console.WriteLine("SysWatch logging started... Press Ctrl+C to stop.");
-            session.Source.Process();
+            session.Source.Kernel.ProcessStop += data =>
+            {
+                var record = new SysEvent
+                {
+                    Timestamp = data.TimeStamp,
+                    EventType = "ProcessStop",
+                    ProcessName = data.ProcessName,
+                    Pid = data.ProcessID
+                };
+
+                if (PassesFilters(record, filters))
+                {
+                    WriteJsonRecord(logStream, record);
+                }
+            };
+
+            // Optional File I/O events
+            session.Source.Kernel.FileIORead += data =>
+            {
+                var record = new SysEvent
+                {
+                    Timestamp = data.TimeStamp,
+                    EventType = "FileIO",
+                    ProcessName = data.ProcessName,
+                    Pid = data.ProcessID,
+                    FilePath = data.FileName
+                };
+
+                if (PassesFilters(record, filters))
+                {
+                    WriteJsonRecord(logStream, record);
+                }
+            };
+
+            session.Source.Kernel.FileIOWrite += data =>
+            {
+                var record = new SysEvent
+                {
+                    Timestamp = data.TimeStamp,
+                    EventType = "FileIO",
+                    ProcessName = data.ProcessName,
+                    Pid = data.ProcessID,
+                    FilePath = data.FileName
+                };
+
+                if (PassesFilters(record, filters))
+                {
+                    WriteJsonRecord(logStream, record);
+                }
+            };
+
+            session.Source.Process(); // blocks and streams ETW events
         }
     }
 
-    static void LoadMonitoredPaths()
+    static void WriteJsonRecord(StreamWriter logStream, SysEvent record)
     {
-        string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "monitored_paths.txt");
-
-        if (File.Exists(configPath))
-        {
-            monitoredPaths = File.ReadAllLines(configPath)
-                .Where(line => !string.IsNullOrWhiteSpace(line) && !line.TrimStart().StartsWith("#"))
-                .Select(line => line.Trim())
-                .ToList();
-
-            Console.WriteLine($"[INFO] Loaded {monitoredPaths.Count} monitored paths.");
-        }
-        else
-        {
-            Console.WriteLine($"[WARNING] Config file not found: {configPath}");
-        }
+        string json = JsonSerializer.Serialize(record);
+        logStream.WriteLine(json);
+        logStream.Flush(); // ensure realtime streaming
     }
+
+    static List<FilterRule> LoadFilters(string path)
+    {
+        if (!File.Exists(path))
+        {
+            Console.WriteLine($"[SysWatch] No filters.json found, logging everything...");
+            return new List<FilterRule>();
+        }
+
+        string json = File.ReadAllText(path);
+        return JsonSerializer.Deserialize<List<FilterRule>>(json) ?? new List<FilterRule>();
+    }
+
+    static bool PassesFilters(SysEvent record, List<FilterRule> filters)
+    {
+        foreach (var filter in filters)
+        {
+            if (filter.EventType != null && !record.EventType.Equals(filter.EventType, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            if (filter.ProcessName != null && !record.ProcessName.Contains(filter.ProcessName, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            if (filter.FilePath != null && (record.FilePath == null || !record.FilePath.Contains(filter.FilePath, StringComparison.OrdinalIgnoreCase)))
+                continue;
+
+            return true; // passed one filter
+        }
+        return filters.Count == 0; // no filters = log everything
+    }
+}
+
+// JSON schema for events
+class SysEvent
+{
+    public DateTime Timestamp { get; set; }
+    public string EventType { get; set; }
+    public string ProcessName { get; set; }
+    public int Pid { get; set; }
+    public string FilePath { get; set; }
+    public Dictionary<string, object> Extra { get; set; }
+}
+
+// JSON schema for filters
+class FilterRule
+{
+    public string EventType { get; set; }
+    public string ProcessName { get; set; }
+    public string FilePath { get; set; }
 }

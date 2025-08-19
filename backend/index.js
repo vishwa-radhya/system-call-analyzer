@@ -1,50 +1,53 @@
-import express from 'express'
-import fs from 'fs'
-import cors from 'cors'
-import path from 'path'
-import { fileURLToPath } from 'url'
+import fs from "fs";
+import path from "path";
+import { WebSocketServer } from "ws";
+import { fileURLToPath } from "url";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const logFilePath = path.resolve(__dirname, "../logs/SysWatch.jsonl");
+const wss = new WebSocketServer({port:8080});
+console.log("WebSocket server running on ws://localhost:8080");
 
-const app = express()
-const PORT = 3001
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
-app.use(cors())
-
-const logPath = path.resolve(__dirname, '../logs/SysWatchProcessLogs.log')
-
-app.get('/api/logs', (req, res) => {
-  fs.readFile(logPath, 'utf8', (err, data) => {
-    if (err) {
-      console.error('Error reading log file:', err)
-      return res.status(500).send('Error reading log file')
-    }
-
-    const lines = data.trim().split('\n')
-
-    const recentLogs = lines.slice(-300).map(line => {
-      // Example line:
-      // [2025-08-13 22:14:55] [ProcessStart] notepad.exe (PID: 1234)
-      // [2025-08-13 22:15:02] [FileIO] notepad.exe -> D:\test\file.txt
-
-      const timeMatch = line.match(/^\[(.*?)\]/) // timestamp
-      const typeMatch = line.match(/\[(ProcessStart|ProcessStop|FileIO)\]/) // event type
-      const details = line.split('] ').slice(2).join(' ')
-
-      if (timeMatch && typeMatch) {
-        return {
-          timestamp: timeMatch[1],
-          event: typeMatch[1],
-          details
-        }
+function tailFile(filePath, onLine) {
+  let fileSize = 0;
+  // Poll for changes every second
+  setInterval(() => {
+    fs.stat(filePath, (err, stats) => {
+      if (err) return;
+      if (stats.size > fileSize) {
+        const stream = fs.createReadStream(filePath, {
+          start: fileSize,
+          end: stats.size,
+          encoding: "utf8",
+        });
+      // console.log("stats lower: ",stats.size,"fileSize: ",fileSize)
+        stream.on("data", (chunk) => {
+          const lines = chunk.trim().split("\n");
+          for (const line of lines) {
+            if (line.trim()) {
+              try {
+                const json = JSON.parse(line);
+                onLine(json);
+              } catch (e) {
+                console.error("Failed to parse line:", line);
+              }
+            }
+          }
+        });
+        fileSize = stats.size;
       }
-      return null
-    }).filter(Boolean)
-
-    res.json(recentLogs)
-  })
-})
-
-app.listen(PORT, () => {
-  console.log(`Log API running at http://localhost:${PORT}`)
-})
+    });
+  }, 500);
+}
+wss.on("connection", (ws) => {
+  console.log("Client connected");
+  tailFile(logFilePath, (jsonLine) => {
+    if (ws.readyState === ws.OPEN) {
+      ws.send(JSON.stringify(jsonLine));
+      console.log(jsonLine)
+    }
+  });
+  ws.on("close", () => {
+    console.log("Client disconnected");
+  });
+});
