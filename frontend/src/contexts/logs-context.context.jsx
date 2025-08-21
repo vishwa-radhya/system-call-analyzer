@@ -1,16 +1,8 @@
-import { createContext, useMemo, useState,useEffect,useContext } from "react";
+import { createContext, useMemo, useState,useEffect,useContext, useRef } from "react";
 
 const LogsContext = createContext();
 export const LogsProvider =({children})=>{
-    const [logs,setLogs]=useState([
-      {"Timestamp":"2025-08-19T16:43:37.3230197+05:30","EventType":"ProcessStop","ProcessName":"","Pid":7592,"FilePath":null,"Extra":null},
-    {"Timestamp":"2025-08-21T14:28:02.9019034+05:30","EventType":"ProcessStart","ProcessName":"chrome","Pid":16848,"FilePath":null,"Extra":{"ParentPid":21836,"ImageFileName":"chrome.exe"}},
-    {"Timestamp":"2025-08-21T14:28:02.9440511+05:30","EventType":"ProcessStop","ProcessName":"","Pid":22408,"FilePath":null,"Extra":null},
-    {"Timestamp":"2025-08-21T14:28:02.9547686+05:30","EventType":"ProcessStop","ProcessName":"","Pid":23204,"FilePath":null,"Extra":null},
-    {"Timestamp":"2025-08-21T14:28:02.9615272+05:30","EventType":"ProcessStop","ProcessName":"","Pid":20384,"FilePath":null,"Extra":null},
-    {"Timestamp":"2025-08-21T14:28:02.9626032+05:30","EventType":"ProcessStop","ProcessName":"","Pid":16848,"FilePath":null,"Extra":null},
-    {"Timestamp":"2025-08-21T14:28:02.9657575+05:30","EventType":"ProcessStart","ProcessName":"chrome","Pid":10664,"FilePath":null,"Extra":{"ParentPid":21836,"ImageFileName":"chrome.exe"}}
-    ]);
+    const [logs,setLogs]=useState([]);
     const [filterType,setFilterType]=useState("All Logs");
     const [searchQuery,setSearchQuery]=useState("");
     //stats
@@ -18,6 +10,8 @@ export const LogsProvider =({children})=>{
     const [processStartCount, setProcessStartCount] = useState(0);
     const [processStopCount, setProcessStopCount] = useState(0);
     const [activePids, setActivePids] = useState(new Set());
+    // websocket in a ref to use across components
+    const wsRef = useRef(null);
     // filtering logic
     const filteredLogs = useMemo(()=>{
       let result = logs;
@@ -37,6 +31,7 @@ export const LogsProvider =({children})=>{
     // websocket useEffect
     useEffect(() => {
     const ws = new WebSocket("ws://localhost:8080");
+    wsRef.current=ws;
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
@@ -75,10 +70,19 @@ export const LogsProvider =({children})=>{
     ws.onclose = () => console.log("Disconnected");
     return () => ws.close();
   }, []);
+
+  const sendControlCommand=(command)=>{
+    if(wsRef.current && wsRef.current.readyState===WebSocket.OPEN){
+      wsRef.current.send(JSON.stringify({type:"CONTROL",action:command}));
+    }else{
+      console.warn("WebSocket not connected, cannot send command");
+    }
+  }
+
   const handleSetFilterType=(val)=>setFilterType(val)
   const handleSetSearchQuery=(val)=>setSearchQuery(val);
     return(
-        <LogsContext.Provider value={{filterType,handleSetFilterType,filteredLogs,totalEvents,processStartCount,processStopCount,activePids,searchQuery,handleSetSearchQuery}}>
+        <LogsContext.Provider value={{filterType,handleSetFilterType,filteredLogs,totalEvents,processStartCount,processStopCount,activePids,searchQuery,handleSetSearchQuery,sendControlCommand}}>
             {children}
         </LogsContext.Provider>
     )

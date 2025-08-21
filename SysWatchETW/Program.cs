@@ -1,16 +1,24 @@
-﻿using System;
-using System.IO;
-using System.Text.Json;
-using System.Collections.Generic;
-using Microsoft.Diagnostics.Tracing;
+﻿using System.Text.Json;
 using Microsoft.Diagnostics.Tracing.Parsers;
 using Microsoft.Diagnostics.Tracing.Session;
-
 class Program
 {
     static Dictionary<int, string> pidNameMap = new();
+    static bool _isPaused = false; // control flag
+    static StreamWriter? logStream;
     static void Main(string[] args)
     {
+        //ensuring stdout uses UTF-8 and flushes immediately
+        Console.OutputEncoding = System.Text.Encoding.UTF8;
+        Console.WriteLine("[SysWatch] Initialized");
+        Console.Out.Flush();
+        //admin check
+        if (!(TraceEventSession.IsElevated() ?? false))
+        {
+            Console.WriteLine("[SysWatch ERROR]: Please run as Administrator.");
+        }
+            // run stdin listener in background
+            Task.Run(() => ListenForComands());
         string projectRoot = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", ".."));
         string logsDir = Path.Combine(projectRoot, "logs");
         Directory.CreateDirectory(logsDir);
@@ -24,8 +32,7 @@ class Program
         var filters = LoadFilters(filtersFile);
 
         // Open log stream for appending JSONL
-        using var logStream = new StreamWriter(logFile, append: true);
-
+         logStream = new StreamWriter(new FileStream(logFile, FileMode.Append, FileAccess.Write, FileShare.ReadWrite)) { AutoFlush = true };
         // Start ETW session
         using (var session = new TraceEventSession("SysWatchSession"))
         {
@@ -33,6 +40,7 @@ class Program
 
             session.Source.Kernel.ProcessStart += data =>
             {
+                if (_isPaused) return;
                 pidNameMap[data.ProcessID] = data.ProcessName ?? "";
                 var record = new SysEvent
                 {
@@ -55,6 +63,7 @@ class Program
 
             session.Source.Kernel.ProcessStop += data =>
             {
+                if (_isPaused) return;
                 string name = string.IsNullOrEmpty(data.ProcessName) &&
                   pidNameMap.TryGetValue(data.ProcessID, out var cachedName) ? cachedName : data.ProcessName;
                 var record = new SysEvent
@@ -75,6 +84,7 @@ class Program
             // Optional File I/O events
             session.Source.Kernel.FileIORead += data =>
             {
+                if (_isPaused) return;
                 var record = new SysEvent
                 {
                     Timestamp = data.TimeStamp,
@@ -92,6 +102,7 @@ class Program
 
             session.Source.Kernel.FileIOWrite += data =>
             {
+                if (_isPaused) return;
                 var record = new SysEvent
                 {
                     Timestamp = data.TimeStamp,
@@ -110,9 +121,36 @@ class Program
             session.Source.Process(); // blocks and streams ETW events
         }
     }
-
+    static void ListenForComands()
+    {
+        while (true)
+        {
+            var line = Console.ReadLine();
+            if (line == null) continue;
+            switch (line.Trim().ToUpperInvariant())
+            {
+                case "STOP":
+                    _isPaused = true;
+                    Console.WriteLine("[SysWatch] Logging paused.");
+                    break;
+                case "START":
+                    _isPaused = false;
+                    Console.WriteLine("[SysWatch] Logging resumed.");
+                    break;
+                case "EXIT":
+                    _isPaused = true;
+                    Console.WriteLine("[SysWatch] Exiting on request.");
+                    Environment.Exit(0);
+                    break;
+                default:
+                    Console.WriteLine($"[SysWatch] Unknown command: {line}");
+                    break;
+            }
+        }
+    }
     static void WriteJsonRecord(StreamWriter logStream, SysEvent record)
     {
+        if (logStream == null) return;
         string json = JsonSerializer.Serialize(record);
         logStream.WriteLine(json);
         logStream.Flush(); // ensure realtime streaming

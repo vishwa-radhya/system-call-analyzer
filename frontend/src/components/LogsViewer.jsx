@@ -1,7 +1,15 @@
 import { useEffect, useState } from "react";
 
 export default function LogsViewer() {
-  const [logs, setLogs] = useState([]);
+  const [logs, setLogs] = useState([
+    {"Timestamp":"2025-08-19T16:43:37.3230197+05:30","EventType":"ProcessStop","ProcessName":"","Pid":7592,"FilePath":null,"Extra":null},
+        {"Timestamp":"2025-08-21T14:28:02.9019034+05:30","EventType":"ProcessStart","ProcessName":"chrome","Pid":16848,"FilePath":null,"Extra":{"ParentPid":21836,"ImageFileName":"chrome.exe"}},
+        {"Timestamp":"2025-08-21T14:28:02.9440511+05:30","EventType":"ProcessStop","ProcessName":"","Pid":22408,"FilePath":null,"Extra":null},
+        {"Timestamp":"2025-08-21T14:28:02.9547686+05:30","EventType":"ProcessStop","ProcessName":"","Pid":23204,"FilePath":null,"Extra":null},
+        {"Timestamp":"2025-08-21T14:28:02.9615272+05:30","EventType":"ProcessStop","ProcessName":"","Pid":20384,"FilePath":null,"Extra":null},
+        {"Timestamp":"2025-08-21T14:28:02.9626032+05:30","EventType":"ProcessStop","ProcessName":"","Pid":16848,"FilePath":null,"Extra":null},
+        {"Timestamp":"2025-08-21T14:28:02.9657575+05:30","EventType":"ProcessStart","ProcessName":"chrome","Pid":10664,"FilePath":null,"Extra":{"ParentPid":21836,"ImageFileName":"chrome.exe"}}
+  ]);
 
   useEffect(() => {
     const ws = new WebSocket("ws://localhost:8080");
