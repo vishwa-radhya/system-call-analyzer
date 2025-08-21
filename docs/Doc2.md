@@ -1,83 +1,163 @@
 # TAKE 2 
-> using a Map Dictionary to to ensure the process exit contains a name
- `var pidMap = new Dictionary<int, string>();`
 
-also the structural log is written to log file
+### next steps rewriting the c# code to write structured logs(json) to logs/ path
+#### code samples
 ```
-void WriteLog(string type, string message)
+string projectRoot = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", ".."));
+string logsDir = Path.Combine(projectRoot,"logs");
+Directory.CreateDirectory(logsDir);
+string logFile = Path.Combine(logsDir, "SysWatch.jsonl");
+string filtersFile = "filters.json"; 
+```
+getting logFile path and filtersFile
+
+### filters file(json)
+```
+[{
+  "includePaths": ["C:\\Users", "C:\\Projects"],
+  "excludePaths": ["C:\\Windows", "C:\\Program Files"],
+  "eventTypes": ["ProcessStart", "ProcessStop","FileIO"]
+}]
+```
+>!!!issue no logs write for FileIO (needed fix) ... 
+
+### loading filters file
+```
+static List<FilterRule> LoadFilters(string path)
 {
-    string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-    string logEntry = $"[{timestamp}] [{type}] {message}";
-    Console.WriteLine(logEntry);
-    logFile.WriteLine(logEntry);
-    logFile.Flush();
+    if (!File.Exists(path))
+    {
+        Console.WriteLine($"[SysWatch] No filters.json found, logging everything...");
+        return new List<FilterRule>();
+    }
+
+    string json = File.ReadAllText(path);
+    return JsonSerializer.Deserialize<List<FilterRule>>(json) ?? new List<FilterRule>();
 }
 ```
-with process start is stored in map for exit process lookup
+### json structure class
 ```
-session.Source.Kernel.ProcessStart += (proc) =>
+class SysEvent
 {
-    pidMap[proc.ProcessID] = proc.ProcessName;
-    WriteLog("ProcessStart", $"{proc.ProcessName} (PID: {proc.ProcessID})");
-};
-{
-string name = string.IsNullOrEmpty(proc.ProcessName) && pidMap.ContainsKey(proc.ProcessID)
-    ? pidMap[proc.ProcessID]
-    : proc.ProcessName;
-
-WriteLog("ProcessStop", $"{name} (PID: {proc.ProcessID})");
-pidMap.Remove(proc.ProcessID); // removal for maintaining consistent dictionary map
-};
+    public DateTime Timestamp { get; set; }
+    public string EventType { get; set; }
+    public string ProcessName { get; set; }
+    public int Pid { get; set; }
+    public string FilePath { get; set; }
+    public Dictionary<string, object> Extra { get; set; }
+}
 ```
-> also DUE to high volume of FIleIO initially switched to D: and E: for my pc to ensure everthing is working
+### sample json write for process start
 ```
-session.Source.Kernel.FileIOCreate += (file) =>
+session.Source.Kernel.ProcessStart += data =>
 {
-    if (!string.IsNullOrEmpty(file.FileName) &&
-        (file.FileName.StartsWith(@"D:\", StringComparison.OrdinalIgnoreCase) ||
-            file.FileName.StartsWith(@"E:\", StringComparison.OrdinalIgnoreCase)))
+    var record = new SysEvent
     {
-        WriteLog("FileIO", $"{file.ProcessName} -> {file.FileName}");
+        Timestamp = data.TimeStamp,
+        EventType = "ProcessStart",
+        ProcessName = data.ProcessName,
+        Pid = data.ProcessID,
+        Extra = new Dictionary<string, object>
+        {
+            {"ParentPid", data.ParentID},
+            {"ImageFileName", data.ImageFileName}
+        }
+    };
+
+    if (PassesFilters(record, filters))
+    {
+        WriteJsonRecord(logStream, record);
     }
 };
 ```
-now using a predefined monitored paths txt file to include only necessary  paths to remove unnecessary noise
+### filter code
+```
+static bool PassesFilters(SysEvent record, List<FilterRule> filters)
+{
+    foreach (var filter in filters)
+    {
+        if (filter.EventType != null && !record.EventType.Equals(filter.EventType, StringComparison.OrdinalIgnoreCase))
+            continue;
 
-./monitored_path.txt
-- D:\
-- E:\
-- C:\Users
-- C:\Program Files
-- C:\Program Files (x86)
-- C:\Windows\System32
+        if (filter.ProcessName != null && !record.ProcessName.Contains(filter.ProcessName, StringComparison.OrdinalIgnoreCase))
+            continue;
 
-> this file is stored in /bin/Debug/net8.0/ for visibilty when `dot run` is executed
+        if (filter.FilePath != null && (record.FilePath == null || !record.FilePath.Contains(filter.FilePath, StringComparison.OrdinalIgnoreCase)))
+            continue;
 
-Still there is much noise like 3000+ logs in 40sec or some
-### Thoughts
-- those paths are very “chatty” because Windows and background services are constantly touching files in them.
-- C:\Windows\System32 → OS processes, DLL loading, background updates, antivirus scans.
-- C:\Program Files / (x86) → services running from installed software, background auto-updaters.
-- C:\Users → browser caches, app data writes, temp files, cloud sync clients.
-- ETW File I/O events are extremely high-volume in those directories, even if you’re doing nothing — Windows constantly logs activity there.
+        return true; // passed one filter
+    }
+    return filters.Count == 0; // no filters = log everything
+}
+```
+### ....  using websocket for nodejs server for realtime data log
+1. setting up imports and file_path_to_**logFile**
+```
+import fs from "fs";
+import path from "path";
+import { WebSocketServer } from "ws";
+import { fileURLToPath } from "url";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const logFilePath = path.resolve(__dirname, "../logs/SysWatch.jsonl");
+const wss = new WebSocketServer({port:8080});
+console.log("WebSocket server running on ws://localhost:8080");
 
-#### suggestions
--  can’t realistically log everything here without filtering — 3000+ events in 40 seconds is normal.
--  Filtering ideas:
-    - Only log processes we care about (e.g., your suspicious target process).
-   - Only log specific file extensions (e.g., .exe, .dll, .sys).
-   - Ignore read-only operations, log only writes/deletes/renames.
-   - Exclude well-known noisy processes (svchost.exe, chrome.exe, etc.).
-- Aggregation:
-    - Instead of logging every event, group them into summaries like:
-svchost.exe wrote 15 files to C:\Windows\System32 in 10 seconds
-- Burst capture mode:
-    - Enable full-detail logging only when a suspicious process or path is detected.
-  
-This way, baseline noise is skipped.
-> Following these practices
- - Reads your monitored_paths.txt
- - Ignores a predefined noisy process list
- - Only logs Write/Delete events, not every read.
-
-**That will probably cut your log size by 90%+ while still keeping the interesting stuff.**
+```
+2. websocket connection and close handlers for sending **jsonLogLine** to client
+```
+wss.on("connection", (ws) => {
+  console.log("Client connected");
+  tailFile(logFilePath, (jsonLine) => {
+    if (ws.readyState === ws.OPEN) {
+      ws.send(JSON.stringify(jsonLine));
+      console.log(jsonLine)
+    }
+  });
+  ws.on("close", () => {
+    console.log("Client disconnected");
+  });
+});
+```
+3. tailing th **Log** file at 500ms 
+- keeping track of bytes already read with **(fileSize)**
+- Every 500ms (setInterval with 500ms)
+  - check if the file has grown (new logs were written)
+  - if yes, open the file from last known position to new end (fs.createReadStream)
+  - reads only the new lines (not the whole file again)
+  - split the chunk into lines, parse each line as JSON, call onLine(json) to websocket
+- Update fileSize so next time it continues where it left off.
+- Its like tailing a log like `tail -f` in linux
+```
+function tailFile(filePath, onLine) {
+  let fileSize = 0;
+  // Poll for changes every second
+  setInterval(() => {
+    fs.stat(filePath, (err, stats) => {
+      if (err) return;
+      if (stats.size > fileSize) {
+        const stream = fs.createReadStream(filePath, {
+          start: fileSize,
+          end: stats.size,
+          encoding: "utf8",
+        });
+      // console.log("stats lower: ",stats.size,"fileSize: ",fileSize)
+        stream.on("data", (chunk) => {
+          const lines = chunk.trim().split("\n");
+          for (const line of lines) {
+            if (line.trim()) {
+              try {
+                const json = JSON.parse(line);
+                onLine(json);
+              } catch (e) {
+                console.error("Failed to parse line:", line);
+              }
+            }
+          }
+        });
+        fileSize = stats.size;
+      }
+    });
+  }, 500);
+}
+```

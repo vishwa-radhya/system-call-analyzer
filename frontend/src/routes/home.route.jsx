@@ -1,42 +1,104 @@
-import LogsViewer from "../components/LogsViewer";
-import { Activity } from "lucide-react";
+import { Activity,CirclePlay, CircleX, Cpu,Play,Trash,Download,Pause } from "lucide-react";
 import InfoCard from "../components/info-card.component";
 import { Table,TableBody,TableCell,TableHead,TableHeader,TableRow } from "../components/ui/table";
-const dataArray=[
-    {"Timestamp":"2025-08-19T16:43:37.3230197+05:30","EventType":"ProcessStop","ProcessName":"","Pid":7592,"FilePath":null,"Extra":null},
-{"Timestamp":"2025-08-19T16:43:37.3257062+05:30","EventType":"ProcessStop","ProcessName":"","Pid":17024,"FilePath":null,"Extra":null},
-{"Timestamp":"2025-08-19T16:43:37.3308326+05:30","EventType":"ProcessStop","ProcessName":"","Pid":8828,"FilePath":null,"Extra":null},
-{"Timestamp":"2025-08-19T16:43:38.5893663+05:30","EventType":"ProcessStart","ProcessName":"git","Pid":14960,"FilePath":null,"Extra":{"ParentPid":4108,"ImageFileName":"git.exe"}},
-{"Timestamp":"2025-08-19T16:43:38.596973+05:30","EventType":"ProcessStart","ProcessName":"git","Pid":18828,"FilePath":null,"Extra":{"ParentPid":4108,"ImageFileName":"git.exe"}},
-{"Timestamp":"2025-08-19T16:43:38.597585+05:30","EventType":"ProcessStart","ProcessName":"conhost","Pid":1532,"FilePath":null,"Extra":{"ParentPid":14960,"ImageFileName":"conhost.exe"}}
-]
+import {Select,SelectContent,SelectItem,SelectTrigger,SelectValue} from '../components/ui/select';
+import {Input} from '../components/ui/input';
+import Header from "../components/header.component";
+import OptionButton from "../components/option-button.component";
+import { useState } from "react";
+import { useLogsContext } from "../contexts/logs-context.context";
+
 const Home = () => {
+    const {filterType,handleSetFilterType,filteredLogs,totalEvents,processStartCount,processStopCount,activePids,searchQuery,handleSetSearchQuery}=useLogsContext();
+
+    const [isPaused,setIsPaused]=useState(false);
+    const formatTime = (timestamp) => {
+        return new Date(timestamp).toLocaleTimeString('en-US', { 
+            hour12: false, 
+            hour: '2-digit', 
+            minute: '2-digit', 
+            second: '2-digit' 
+        });
+    };
+      const handlePlayPause=()=>{
+        setIsPaused(prev=>!prev)
+      }
+
     return ( 
-        <div className="p-6 flex flex-col gap-3">
-            <div className="flex w-full border justify-between">
-                <div className="flex flex-col gap-2 p-2">
-                    <h2 className="text-4xl">System Logs Dashboard</h2>
-                    <p>Real-time monitoring of system processes </p>
+        <div className="p-2 flex flex-col gap-2">
+            <Header/>
+            <div className=" p-1 flex">
+                <div className="w-[71%]  p-1 flex flex-col">
+                    <div className=" h-[520px]">
+                    <div className="flex gap-2">
+                        <OptionButton Icon={isPaused ?Play : Pause} text={isPaused?'Resume':'Stop'} handleClick={handlePlayPause} />
+                        <OptionButton Icon={Trash} text='Clear' />
+                        <OptionButton Icon={Download} text='Export' />
+                        <Input type="search" placeholder='Search logs...' value={searchQuery} onChange={(e)=>handleSetSearchQuery(e.target.value)} />
+                        <Select value={filterType} onValueChange={handleSetFilterType} >
+                            <SelectTrigger>
+                                <SelectValue placeholder='Select type'></SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="All Logs">All Logs</SelectItem>
+                                <SelectItem value="Process Start">Process Start</SelectItem>
+                                <SelectItem value="Process Stop">Process Stop</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                        <div className="p-2 h-[450px] overflow-y-auto ">
+                        <Table>
+                        <TableHeader className="sticky top-0 bg-gray-50 text-[18px]">
+                            <TableRow>
+                                <TableHead className="px-3 py-2 text-left font-medium text-gray-600">Time</TableHead>
+                                <TableHead className="px-3 py-2 text-left font-medium text-gray-600">Event</TableHead>
+                                <TableHead className="px-3 py-2 text-left font-medium text-gray-600">Process</TableHead>
+                                <TableHead className="px-3 py-2 text-left font-medium text-gray-600">PID</TableHead>
+                                <TableHead className="px-3 py-2 text-left font-medium text-gray-600">Parent PID</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody >
+                            {filteredLogs.map((log, index) => (
+                                <TableRow key={index} className="hover:bg-blue-50 transition-colors text-[20px]">
+                                    <TableCell className="px-3 py-2 text-gray-600 font-mono ">
+                                        {formatTime(log.Timestamp)}
+                                    </TableCell>
+                                    <TableCell className="px-3 py-2">
+                                        <div className="flex items-center">
+                                            <span className={`inline-block w-2 h-2 rounded-full mr-2 ${
+                                                log.EventType === 'ProcessStart' ? 'bg-green-500' : 'bg-red-500'
+                                            }`}></span>
+                                            <span className="text-gray-900 ">{log.EventType}</span>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="px-3 py-2 text-gray-900">
+                                        {log.ProcessName || '—'}
+                                    </TableCell>
+                                    <TableCell className="px-3 py-2 text-gray-600 font-mono ">
+                                        {log.Pid}
+                                    </TableCell>
+                                    <TableCell className="px-3 py-2 text-gray-600 font-mono">
+                                        {log.Extra?.ParentPid || '—'}
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                        </div>
+                    </div>
+                    <div className=" grow p-1 grid gap-2 grid-cols-[repeat(auto-fit,minmax(270px,1fr))]">
+                        <InfoCard name='Total Events' val={totalEvents} Icon={Activity} content={'Total events logged by System'} iconColor={'blue'}  />
+                        <InfoCard name='Process Start' val={processStartCount} Icon={CirclePlay} content={'Total number of process starts'} iconColor={'green'} />
+                        <InfoCard name='Process Stop' val={processStopCount} Icon={CircleX} content={'Total number of process stops'} iconColor={'red'} />
+                        <InfoCard name='Active PIDs' val={activePids.size} Icon={Cpu} content={'Total number of active processes'}  iconColor={'purple'} />
+                    </div>
                 </div>
-                <div className="flex gap-1 border  p-2 h-fit my-[auto] mr-2 rounded-[4px]">   
-                    <Activity /> Live
+                <div className="border grow rounded flex flex-col gap-1 p-1">
+                    <h3 className="text-center border p-1">Log Analyzer</h3>
+                    <div className="border grow">
+
+                    </div>
                 </div>
-            </div>
-            <div className="border p-2 flex justify-evenly">
-               <InfoCard name={'Total Events'} val={10} Icon={Activity} />
-               <InfoCard name={'Process Start'} val={10} Icon={Activity} />
-               <InfoCard name={'Process Stop'} val={10} Icon={Activity} />
-               <InfoCard name={'Active PIDs'} val={10} Icon={Activity} />
-            </div>
-            <div className="border p-3">
-                <Table className={'border'}>
-                    <TableHeader className={'bg-[gray] '}>
-                        <TableRow>
-                            <TableHead>Event</TableHead>
-                            <TableHead>Time</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                </Table>
             </div>
         </div>
      );

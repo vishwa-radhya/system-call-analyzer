@@ -8,13 +8,14 @@ using Microsoft.Diagnostics.Tracing.Session;
 
 class Program
 {
+    static Dictionary<int, string> pidNameMap = new();
     static void Main(string[] args)
     {
         string projectRoot = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", ".."));
-        string logsDir = Path.Combine(projectRoot,"logs");
+        string logsDir = Path.Combine(projectRoot, "logs");
         Directory.CreateDirectory(logsDir);
         string logFile = Path.Combine(logsDir, "SysWatch.jsonl");
-        string filtersFile = "filters.json"; 
+        string filtersFile = "filters.json";
 
         Console.WriteLine($"[SysWatch] Starting ETW session...");
         Console.WriteLine($"[SysWatch] Logs -> {logFile}");
@@ -32,6 +33,7 @@ class Program
 
             session.Source.Kernel.ProcessStart += data =>
             {
+                pidNameMap[data.ProcessID] = data.ProcessName ?? "";
                 var record = new SysEvent
                 {
                     Timestamp = data.TimeStamp,
@@ -53,11 +55,13 @@ class Program
 
             session.Source.Kernel.ProcessStop += data =>
             {
+                string name = string.IsNullOrEmpty(data.ProcessName) &&
+                  pidNameMap.TryGetValue(data.ProcessID, out var cachedName) ? cachedName : data.ProcessName;
                 var record = new SysEvent
                 {
                     Timestamp = data.TimeStamp,
                     EventType = "ProcessStop",
-                    ProcessName = data.ProcessName,
+                    ProcessName = name,
                     Pid = data.ProcessID
                 };
 
@@ -65,6 +69,7 @@ class Program
                 {
                     WriteJsonRecord(logStream, record);
                 }
+                pidNameMap.Remove(data.ProcessID);
             };
 
             // Optional File I/O events
