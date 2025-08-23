@@ -244,4 +244,146 @@ static void ListenForComands()
      }
  }
 ```
-// next steps (optional) handle recieving ACK message to frontend by displaying a Toast on play and pause
+// next steps  handle recieving ACK message to frontend by displaying a Toast on play and pause and other events
+### handling acknowledgements on frontend
+```
+if(data.type === "ERROR"){
+    toast.error(`Action ${data.action} failed: ${data.message}`);
+    return;
+  }
+  if (data.type === "ACK") {
+      if(data.action==="CLEAR_LOGS"){
+        setLogs([]);
+        setTotalEvents(0);
+        setProcessStartCount(0);
+        setProcessStopCount(0);
+        setActivePids(new Set());
+        toast.success("Logs cleared successfully!");
+      }else{
+        toast.success(`Action "${data.action}" executed successfully!`);
+      }
+      return;
+}
+```
+### implementing **clear logs** function
+#### Refactoring ws.on('message')
+```
+if(data.type==="CONTROL"){
+  if(!dotnetProcess.stdin.writable){
+    console.error(".NET process stdin not writable");
+    ws.send(JSON.stringify({type:"ERROR",action:data.action,message:"Process stdin not writable"}));
+    return;
+  }
+  switch(data.action){
+    case "CLEAR_LOGS":
+      dotnetProcess.stdin.write("STOP\n");
+      console.log("sent control:","STOP");
+      // waiting 100ms for .NET to pause
+      await new Promise((res)=>setTimeout(res,100));
+      // clear log file
+      await new Promise((resolve,reject)=>{
+        fs.truncate(logFilePath,0,(err)=>{
+          if(err){
+            console.error("Failed to clear logs:",err);
+            reject(err);
+          }else{
+            console.log("Logs cleared");
+            resolve();
+            resetTailPosition();
+          }
+        })
+      })
+      // ACK to frontend
+      ws.send(JSON.stringify({type:"ACK",action:"CLEAR_LOGS"}));
+      // resuming .NET after delay
+      setTimeout(()=>{
+        dotnetProcess.stdin.write("START\n");
+        console.log("sent control:","START");
+      },200);
+      break;
+
+    default:
+      dotnetProcess.stdin.write(data.action+"\n");
+      ws.send(JSON.stringify({type:"ACK",action:data.action}));
+      console.log("sent control:",data.action)
+}
+```
+1. using deafault switch to send message to .NET child process
+2. for **CLEAR_LOGS** message 
+   -  initially a STOP control is sent to child_process(.NET)
+   -  awaitinng for 100ms to pause
+   -  clearing the logFile synchronously using fs.truncate 
+   -  forward ACK flag to frontend to clear and reset things on its side
+   -  resuming the child_process after a delay (200ms) using START control
+   -  also in between the **resetTailPosition()** reassigns the postion of fileRead for **tailFile()** to 0 ensuring the file is read from start again.
+> Minor issue: "after file truncate the file is filled with **NUL** then followed by json data" not a issue for program flow but need __FIX__
+---
+found that the occurance for **NULNULNUL...** is due to .NET child process that still has the log file handle open;
+- the iSSUE is with dotnet application holding the **wrong offset** so we see NULNUL and the next json are from the same last postion from where we deleted the content
+- modified ListenForCommands() function which opens a new handle to log file on START and erases its refernce onSTOP
+```
+static void ListenForComands()
+{
+    while (true)
+    {
+        var line = Console.ReadLine();
+        if (line == null) continue;
+        switch (line.Trim().ToUpperInvariant())
+        {
+            case "STOP":
+                _isPaused = true;
+                logStream?.Flush();
+                logStream?.Close();
+                logStream = null;
+                Console.WriteLine("[SysWatch] Logging paused and file handle closed.");
+                break;
+
+            case "START":
+                _isPaused = false;
+                string projectRoot = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", ".."));
+                string logsDir = Path.Combine(projectRoot, "logs");
+                Directory.CreateDirectory(logsDir);
+                string logFile = Path.Combine(logsDir, "SysWatch.jsonl");
+
+                logStream = new StreamWriter(
+                    new FileStream(logFile, FileMode.Append, FileAccess.Write, FileShare.ReadWrite)
+                ) { AutoFlush = true };
+
+                Console.WriteLine("[SysWatch] Logging resumed and file handle reopened.");
+                break;
+
+            case "EXIT":
+                _isPaused = true;
+                logStream?.Flush();
+                logStream?.Close();
+                logStream = null;
+                Console.WriteLine("[SysWatch] Exiting on request.");
+                Environment.Exit(0);
+                break;
+
+            default:
+                Console.WriteLine($"[SysWatch] Unknown command: {line}");
+                break;
+        }
+    }
+}
+```
+also the WriteJsonRecord is refactored to more reliable version check both the flag and streamWriter before writing
+```
+static void WriteJsonRecord(StreamWriter? logStream, SysEvent record)
+{
+    if (_isPaused || logStream == null) return; // 🚫 skip if paused or closed
+
+    try
+    {
+        string json = JsonSerializer.Serialize(record);
+        logStream.WriteLine(json);
+        logStream.Flush(); // realtime streaming
+    }
+    catch (ObjectDisposedException)
+    {
+        // Handle rare race: logStream closed right before write
+        Console.WriteLine("[SysWatch] Attempted to write while logStream was closed.");
+    }
+}
+```

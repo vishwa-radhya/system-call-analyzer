@@ -123,4 +123,12 @@
   h3{
     @apply text-2xl;
   }
+  *{
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 #f1f5f9;
+  }
+  button{
+    @apply cursor-pointer;
+  }
+ 
 }

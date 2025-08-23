@@ -131,14 +131,27 @@ class Program
             {
                 case "STOP":
                     _isPaused = true;
-                    Console.WriteLine("[SysWatch] Logging paused.");
+                    logStream?.Flush();
+                    logStream?.Close();
+                    logStream = null;
+                    Console.WriteLine("[SysWatch] Logging paused and file handle closed.");
                     break;
                 case "START":
                     _isPaused = false;
-                    Console.WriteLine("[SysWatch] Logging resumed.");
+                    string projectRoot = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", ".."));
+                    string logsDir = Path.Combine(projectRoot, "logs");
+                    Directory.CreateDirectory(logsDir);
+                    string logFile = Path.Combine(logsDir, "SysWatch.jsonl");
+                    logStream = new StreamWriter(
+                        new FileStream(logFile, FileMode.Append, FileAccess.Write, FileShare.ReadWrite)
+                    ){ AutoFlush = true };
+                    Console.WriteLine("[SysWatch] Logging resumed and file hanlde reopened.");
                     break;
                 case "EXIT":
                     _isPaused = true;
+                    logStream?.Flush();
+                    logStream?.Close();
+                    logStream = null;
                     Console.WriteLine("[SysWatch] Exiting on request.");
                     Environment.Exit(0);
                     break;
@@ -150,10 +163,17 @@ class Program
     }
     static void WriteJsonRecord(StreamWriter logStream, SysEvent record)
     {
-        if (logStream == null) return;
-        string json = JsonSerializer.Serialize(record);
-        logStream.WriteLine(json);
-        logStream.Flush(); // ensure realtime streaming
+        if (_isPaused || logStream == null) return; // skip if paused or closed
+        try
+        {
+            string json = JsonSerializer.Serialize(record);
+            logStream.WriteLine(json);
+            logStream.Flush(); // realtime streaming
+        }
+        catch (ObjectDisposedException)
+        {
+            Console.WriteLine("[SysWatch] Attempted to write while logStream was closed");
+        }
     }
 
     static List<FilterRule> LoadFilters(string path)

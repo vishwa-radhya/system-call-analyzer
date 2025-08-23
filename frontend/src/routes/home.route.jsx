@@ -6,28 +6,25 @@ import {Input} from '../components/ui/input';
 import Header from "../components/header.component";
 import ControlOptions from "../components/control-options.component";
 import { useLogsContext } from "../contexts/logs-context.context";
+import LogAnalyzer from "../components/log-analyzer.component";
+import { useState } from "react";
 
 const Home = () => {
-    const {filterType,handleSetFilterType,filteredLogs,totalEvents,processStartCount,processStopCount,activePids,searchQuery,handleSetSearchQuery}=useLogsContext();
-
-    const formatTime = (timestamp) => {
-        return new Date(timestamp).toLocaleTimeString('en-US', { 
-            hour12: false, 
-            hour: '2-digit', 
-            minute: '2-digit', 
-            second: '2-digit' 
-        });
-    };
-
+    const {filterType,handleSetFilterType,filteredLogs,totalEvents,processStartCount,processStopCount,activePids,searchQuery,handleSetSearchQuery,formatTime}=useLogsContext();
+    const [isLogAnalyzerOpen,setIsLogAnalyzerOpen]=useState(true);
+    const [currentLog,setCurrentLog]=useState(null);
+    const handleLogClick=(log)=>{
+        setCurrentLog(log);
+    }
     return ( 
         <div className="p-2 flex flex-col gap-2">
             <Header/>
-            <div className=" p-1 flex">
-                <div className="w-[71%]  p-1 flex flex-col">
-                    <div className=" h-[520px]">
+            <div className="p-1 flex border w-full h-full">
+                <div className="p-1 flex flex-col transition-all duration-300 flex-grow ease-in-out  ">
+                    <div className="h-[520px]">
                     <div className="flex gap-2">
-                        <ControlOptions  />
-                        <Input type="search" placeholder='Search logs...' value={searchQuery} onChange={(e)=>handleSetSearchQuery(e.target.value)} />
+                        <ControlOptions isLogAnalyzerOpen={isLogAnalyzerOpen} setIsLogAnalyzerOpen={setIsLogAnalyzerOpen} />
+                        <Input type="search" placeholder='Search logs...' value={searchQuery} onChange={(e)=>handleSetSearchQuery(e.target.value)} className={'flex-grow w-auto'} />
                         <Select value={filterType} onValueChange={handleSetFilterType} >
                             <SelectTrigger>
                                 <SelectValue placeholder='Select type'></SelectValue>
@@ -53,7 +50,7 @@ const Home = () => {
                         </TableHeader>
                         <TableBody >
                             {filteredLogs.map((log, index) => (
-                                <TableRow key={index} className="hover:bg-blue-50 transition-colors text-[20px]">
+                                <TableRow key={index} className="hover:bg-blue-50 transition-colors text-[20px]" onClick={()=>handleLogClick(log)}>
                                     <TableCell className='px-3 py-2 text-gray-600 font-mono'>
                                         {index+1}
                                     </TableCell>
@@ -90,12 +87,7 @@ const Home = () => {
                         <InfoCard name='Active PIDs' val={activePids.size} Icon={Cpu} content={'Total number of active processes'}  iconColor={'purple'} />
                     </div>
                 </div>
-                <div className="border grow rounded flex flex-col gap-1 p-1">
-                    <h3 className="text-center border p-1">Log Analyzer</h3>
-                    <div className="border grow">
-
-                    </div>
-                </div>
+                <LogAnalyzer isLogAnalyzerOpen={isLogAnalyzerOpen} setIsLogAnalyzerOpen={setIsLogAnalyzerOpen} currentLog={currentLog} />
             </div>
         </div>
      );

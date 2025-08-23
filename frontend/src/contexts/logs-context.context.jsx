@@ -1,4 +1,5 @@
 import { createContext, useMemo, useState,useEffect,useContext, useRef } from "react";
+import { toast } from "sonner";
 
 const LogsContext = createContext();
 export const LogsProvider =({children})=>{
@@ -35,6 +36,23 @@ export const LogsProvider =({children})=>{
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
+        if(data.type === "ERROR"){
+          toast.error(`Action ${data.action} failed: ${data.message}`);
+          return;
+        }
+        if (data.type === "ACK") {
+            if(data.action==="CLEAR_LOGS"){
+              setLogs([]);
+              setTotalEvents(0);
+              setProcessStartCount(0);
+              setProcessStopCount(0);
+              setActivePids(new Set());
+              toast.success("Logs cleared successfully!");
+            }else{
+              toast.success(`Action "${data.action}" executed successfully!`);
+            }
+            return;
+          }
         const handleLog = (log) => {
           setLogs((prev) => [log, ...prev]);
           setTotalEvents((prev) => prev + 1);
@@ -81,8 +99,16 @@ export const LogsProvider =({children})=>{
 
   const handleSetFilterType=(val)=>setFilterType(val)
   const handleSetSearchQuery=(val)=>setSearchQuery(val);
+   const formatTime = (timestamp) => {
+        return new Date(timestamp).toLocaleTimeString('en-US', { 
+            hour12: false, 
+            hour: '2-digit', 
+            minute: '2-digit', 
+            second: '2-digit' 
+        });
+    };
     return(
-        <LogsContext.Provider value={{filterType,handleSetFilterType,filteredLogs,totalEvents,processStartCount,processStopCount,activePids,searchQuery,handleSetSearchQuery,sendControlCommand}}>
+        <LogsContext.Provider value={{filterType,handleSetFilterType,filteredLogs,totalEvents,processStartCount,processStopCount,activePids,searchQuery,handleSetSearchQuery,sendControlCommand,formatTime}}>
             {children}
         </LogsContext.Provider>
     )

@@ -1,7 +1,7 @@
 import { Route, Routes } from "react-router-dom"
-import LogsViewer from "./components/LogsViewer"
 import { Fragment } from "react"
 import Home from "./routes/home.route"
+import {Toaster} from './components/ui/sonner';
 
 function App() {
 
@@ -10,6 +10,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Home/>} />
       </Routes>
+      <Toaster position="top-right" richColors />
     </Fragment>
   )
 }
