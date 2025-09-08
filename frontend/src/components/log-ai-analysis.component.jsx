@@ -4,8 +4,7 @@ import { toast } from 'sonner';
 import { Loader,FileChartColumn,FileBox,Lightbulb,ArrowRight,Bot } from 'lucide-react';
 import AiExplanationTile from './ai-explanation-tile.component';
 
-const LogAIAnalysis = ({currentLog}) => {
-    const [aiResult,setAiResult]=useState('');
+const LogAIAnalysis = ({currentLog,aiResult,handleSetAiResult}) => {
     const [loading,setLoading]=useState(false);
     const fetchAiExplanation=async()=>{
         if(!currentLog) {
@@ -13,7 +12,7 @@ const LogAIAnalysis = ({currentLog}) => {
             return;
         }
         setLoading(true);
-        setAiResult('');
+        handleSetAiResult('');
         try{
             const res = await fetch("http://localhost:5000/ai_explanation",{
                 method:"POST",
@@ -22,8 +21,7 @@ const LogAIAnalysis = ({currentLog}) => {
             });
             const data = await res.json();
             if(data.error) throw new Error(data.error);
-            setAiResult(data?.explanation);
-            console.log(data)
+            handleSetAiResult(data?.explanation);
             toast.success('Ai Explanation generated successfully');
         }catch(e){
             toast.error('AI Explanation Failed')

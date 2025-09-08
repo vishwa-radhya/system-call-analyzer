@@ -1,11 +1,27 @@
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import {MousePointerClick} from 'lucide-react';
 import LogDetails from "./log-details.component";
 import LogAIAnalysis from "./log-ai-analysis.component";
+import LogTree from "./log-tree.component";
+
 
 const selectionArray=['Log','AI Analysis','Tree']
 const LogAnalyzer = ({isLogAnalyzerOpen,currentLog}) => {
     const [currentSelection,setCurrentSelection]=useState(0); // Log, AI Analysis, Tree
+    const [aiResult,setAiResult]=useState('');
+    const [treeResult,setTreeResult]=useState(null);
+
+    const handleSetAiResult=(res)=>{
+        setAiResult(res)
+    }
+    const handleSetTreeResult=(res)=>{
+        setTreeResult(res)
+    }
+    useEffect(()=>{
+        handleSetAiResult('')
+        handleSetTreeResult(null)
+    },[currentLog])
+
     return ( 
         <div className={`border rounded flex flex-col gap-1 p-1 overflow-hidden h-[700px] transition-all duration-300 ease-in-out ${isLogAnalyzerOpen ? 'w-[540px]' : 'w-0'}`}>
             {isLogAnalyzerOpen && <Fragment>
@@ -21,7 +37,8 @@ const LogAnalyzer = ({isLogAnalyzerOpen,currentLog}) => {
                 </div>
                 <div className=" w-full flex-1 min-h-0 overflow-hidden ">
                         {currentSelection===0 && <LogDetails currentLog={currentLog} />}
-                        {currentSelection===1 && <LogAIAnalysis currentLog={currentLog} />}
+                        {currentSelection===1 && <LogAIAnalysis currentLog={currentLog} aiResult={aiResult} handleSetAiResult={handleSetAiResult}  />}
+                        {currentSelection===2 && <LogTree currentLog={currentLog} treeResult={treeResult} handleSetTreeResult={handleSetTreeResult} />}
                 </div>
             </div>}
             </Fragment>}

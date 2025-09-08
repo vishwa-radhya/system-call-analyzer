@@ -86,6 +86,95 @@ app.post("/ai_explanation",async(req,res)=>{
   }
 })
 
+app.get("/process-tree",async(req,res)=>{
+  let targetLog;
+  try {
+    targetLog = JSON.parse(req.query.log);
+  } catch (e) {
+    return res.status(400).json({ error: "invalid log object" });
+  }
+
+  if (!targetLog || !targetLog.Pid) {
+    return res.status(400).json({ error: "log with Pid required" });
+  }
+  const logFile = path.resolve(__dirname,'../logs/SysWatch.jsonl');
+  let logs=[];
+  if(fs.existsSync(logFile)){
+    const content = fs.readFileSync(logFile,"utf-8").split("\n").filter(Boolean);
+    logs=content.map(line=>{
+      try{
+        return JSON.parse(line);
+      }catch(e){
+        return null
+      }
+    }).filter(Boolean);
+  }
+    function buildLogMap(data,targetLog){
+      const logMap = new Map();
+      // Pre-process data for efficient lookup
+      for (const log of data) {
+          if (!logMap.has(log.Pid)) {
+              logMap.set(log.Pid, {
+                  start: null,
+                  stop: null,
+                  children: []
+              });
+          }
+          if (log.EventType === "ProcessStart") {
+              logMap.get(log.Pid).start = log;
+          } else if (log.EventType === "ProcessStop") {
+              logMap.get(log.Pid).stop = log;
+          }
+      }
+      const getChildren = (pid) => {
+          const children = [];
+          for (const log of data) {
+              // Check if the current log is a child of the target pid
+              if (log.Extra?.ParentPid === pid) {
+                  // Ensure the child's start event is within the parent's start and stop
+                  const parentNode = logMap.get(pid);
+                  const parentStart = parentNode.start?.Timestamp;
+                  const parentStop = parentNode.stop?.Timestamp;
+
+                  if (  parentStart && parentStop && (parentStart<parentStop) &&
+                      log.Timestamp > parentStart && log.Timestamp < parentStop) {
+                      children.push(log);
+                  }
+              }
+          }
+          return children;
+      };
+      function buildTree(targetLog) {
+          if (!targetLog) return null;
+          const pid = targetLog.Pid;
+          const node = logMap.get(pid);
+          // Find children within the parent's timeline
+          const children = getChildren(pid);
+          // Recursively build children nodes
+          for (const child of children) {
+              const childNode = buildTree(child);
+              if (childNode) {
+                  node.children.push(childNode);
+              }
+          }
+          
+          return node;
+      }
+      const finalNode= buildTree(targetLog);
+      const parentPid = targetLog?.Extra?.ParentPid;
+      if(parentPid){
+          const parentNode = logMap.get(parentPid);
+          if(parentNode && parentNode?.start?.Timestamp<finalNode?.start?.Timestamp){
+              parentNode.children.push(finalNode);
+              return parentNode;
+          }
+      }
+      return finalNode
+  }
+  const tree = buildLogMap(logs,targetLog);
+  res.json({tree:tree} || {error:"Process not found"});
+})
+
 const logFilePath = path.resolve(__dirname, "../logs/SysWatch.jsonl");
 const wss = new WebSocketServer({port:8080});
 console.log("WebSocket server running on ws://localhost:8080");

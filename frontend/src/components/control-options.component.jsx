@@ -1,16 +1,14 @@
-import { Fragment, useState } from "react";
+import { Fragment } from "react";
 import OptionButton from "./option-button.component";
 import { Play,Pause,Trash,Download,X,LayoutPanelLeft } from "lucide-react";
 import { useLogsContext } from "../contexts/logs-context.context";
 import { toast } from "sonner";
 
 const ControlOptions = ({isLogAnalyzerOpen,setIsLogAnalyzerOpen}) => {
-    const [isPaused,setIsPaused]=useState(false);
-    const {sendControlCommand,filteredLogs}=useLogsContext();
+    const {sendControlCommand,filteredLogs,isPaused}=useLogsContext();
     const handlePlayPause=()=>{
         const command = isPaused ? "START" : "STOP";
         sendControlCommand(command);
-        setIsPaused(prev=>!prev)
       }
       const handleClearLogs=()=>{
         if(filteredLogs.length===0){

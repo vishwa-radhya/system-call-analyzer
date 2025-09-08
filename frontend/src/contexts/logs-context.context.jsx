@@ -6,6 +6,7 @@ export const LogsProvider =({children})=>{
     const [logs,setLogs]=useState([]);
     const [filterType,setFilterType]=useState("All Logs");
     const [searchQuery,setSearchQuery]=useState("");
+    const [isPaused,setIsPaused]=useState(false);
     //stats
     const [totalEvents, setTotalEvents] = useState(0);
     const [processStartCount, setProcessStartCount] = useState(0);
@@ -49,6 +50,11 @@ export const LogsProvider =({children})=>{
               setActivePids(new Set());
               toast.success("Logs cleared successfully!");
             }else{
+              if(data.action==="STOP"){
+                handleSetIsPaused(true)
+              }else if(data.action === "START"){
+                handleSetIsPaused(false)
+              }
               toast.success(`Action "${data.action}" executed successfully!`);
             }
             return;
@@ -99,6 +105,7 @@ export const LogsProvider =({children})=>{
 
   const handleSetFilterType=(val)=>setFilterType(val)
   const handleSetSearchQuery=(val)=>setSearchQuery(val);
+  const handleSetIsPaused=(bool)=>setIsPaused(bool)
    const formatTime = (timestamp) => {
         return new Date(timestamp).toLocaleTimeString('en-US', { 
             hour12: false, 
@@ -108,7 +115,7 @@ export const LogsProvider =({children})=>{
         });
     };
     return(
-        <LogsContext.Provider value={{filterType,handleSetFilterType,filteredLogs,totalEvents,processStartCount,processStopCount,activePids,searchQuery,handleSetSearchQuery,sendControlCommand,formatTime}}>
+        <LogsContext.Provider value={{filterType,handleSetFilterType,filteredLogs,totalEvents,processStartCount,processStopCount,activePids,searchQuery,handleSetSearchQuery,sendControlCommand,formatTime,handleSetIsPaused,isPaused}}>
             {children}
         </LogsContext.Provider>
     )
