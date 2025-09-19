@@ -45,6 +45,12 @@ const LogDetails = ({currentLog}) => {
                     {currentLog?.EventType || 'UNKNOWN'}
                 </div>
             </div>
+            {currentLog?.FilePath && <div className="break-all whitespace-pre-wrap">
+                <p>FILE PATH</p>
+                <div className="border p-3 rounded">
+                    {currentLog?.FilePath || "UNKNOWN"}
+                </div>
+            </div>}
             {currentLog?.Extra && <Fragment>
                 <div className="flex flex-col gap-1">
                 <p>PARENT PID</p>

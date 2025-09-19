@@ -3,33 +3,57 @@ import { toast } from "sonner";
 
 const LogsContext = createContext();
 export const LogsProvider =({children})=>{
-    const [logs,setLogs]=useState([]);
-    const [filterType,setFilterType]=useState("All Logs");
-    const [searchQuery,setSearchQuery]=useState("");
+    // shared or global data
     const [isPaused,setIsPaused]=useState(false);
-    //stats
-    const [totalEvents, setTotalEvents] = useState(0);
-    const [processStartCount, setProcessStartCount] = useState(0);
-    const [processStopCount, setProcessStopCount] = useState(0);
+    const [eventCounts,setEventCounts]=useState({});
+
+    // process Data
+    const [processLogs,setProcessLogs]=useState([]);
+    const [processFilterType,setProcessFilterType]=useState("All Logs");
+    const [processSearchQuery,setProcessSearchQuery]=useState("");
     const [activePids, setActivePids] = useState(new Set());
+
+    //FileIO data
+    const [fileIOLogs,setFileIOLogs]=useState([]);
+    const [fileIOFilterType,setFileIOFilterType]=useState("All Logs");
+    const [fileIOSearchQuery,setFileIOSearchQuery]=useState("");
+
+    
     // websocket in a ref to use across components
     const wsRef = useRef(null);
     // filtering logic
-    const filteredLogs = useMemo(()=>{
-      let result = logs;
-        if(filterType==="Process Start"){
+    const filteredProcessLogs = useMemo(()=>{
+      let result = processLogs;
+        if(processFilterType==="Process Start"){
           result= result.filter((log)=>log.EventType==="ProcessStart");
         } 
-        else if(filterType==="Process Stop"){
+        else if(processFilterType==="Process Stop"){
           result = result.filter((log)=>log.EventType==="ProcessStop");
         }
-        if(searchQuery.trim() !== ""){
+        if(processFilterType.trim() !== ""){
           result = result.filter((log)=>
-            log?.ProcessName?.toLowerCase().includes(searchQuery.toLowerCase())
+            log?.ProcessName?.toLowerCase().includes(processSearchQuery.toLowerCase())
           )
         }
         return result;
-    },[logs,filterType,searchQuery])
+    },[processLogs,processFilterType,processSearchQuery])
+
+    const filteredFileIOLogs=useMemo(()=>{
+      let result =fileIOLogs;
+      if(fileIOFilterType==="File Read"){
+        result = result.filter((log)=>log.EventType==="FileRead");
+      }else if(fileIOFilterType === "File Write"){
+        result = result.filter((log)=>log.EventType==="FileWrite");
+      }else if(fileIOFilterType==="File Rename"){
+        result = result.filter((log)=>log.EventType==="FileRename");
+      }
+      if(fileIOFilterType.trim() !== ""){
+          result = result.filter((log)=>log?.ProcessName?.toLowerCase().includes(fileIOSearchQuery.toLowerCase())
+        )
+      }
+      return result;
+    },[fileIOLogs,fileIOFilterType,fileIOSearchQuery])
+
     // websocket useEffect
     useEffect(() => {
     const ws = new WebSocket("ws://localhost:8080");
@@ -43,10 +67,8 @@ export const LogsProvider =({children})=>{
         }
         if (data.type === "ACK") {
             if(data.action==="CLEAR_LOGS"){
-              setLogs([]);
-              setTotalEvents(0);
-              setProcessStartCount(0);
-              setProcessStopCount(0);
+              setProcessLogs([]);
+              setEventCounts({});
               setActivePids(new Set());
               toast.success("Logs cleared successfully!");
             }else{
@@ -60,24 +82,30 @@ export const LogsProvider =({children})=>{
             return;
           }
         const handleLog = (log) => {
-          setLogs((prev) => [log, ...prev]);
-          setTotalEvents((prev) => prev + 1);
-
-          if (log.EventType === "ProcessStart") {
-            setProcessStartCount((prev) => prev + 1);
-            setActivePids((prev) => {
-              const copy = new Set(prev);
-              copy.add(log.Pid);
-              return copy;
-            });
-          } else if (log.EventType === "ProcessStop") {
-            setProcessStopCount((prev) => prev + 1);
-            setActivePids((prev) => {
-              const copy = new Set(prev);
-              copy.delete(log.Pid);
-              return copy;
-            });
+          if(log.EventType==="ProcessStart" || log.EventType==="ProcessStop"){
+            setProcessLogs((prev)=>[log,...prev]);
+            if (log.EventType === "ProcessStart") {
+              setActivePids((prev) => {
+                const copy = new Set(prev);
+                copy.add(log.Pid);
+                return copy;
+              });
+            } 
+            else if (log.EventType === "ProcessStop") {
+              setActivePids((prev) => {
+                const copy = new Set(prev);
+                copy.delete(log.Pid);
+                return copy;
+              });
+            }
           }
+          if(log.EventType==="FileRead" || log.EventType==="FileWrite" || log.EventType==="FileRename"){
+            setFileIOLogs((prev)=>[log,...prev])
+          }
+          setEventCounts((prev)=>({
+            ...prev,
+            [log.EventType] : (prev[log.EventType] || 0) + 1
+          }))
         };
 
         if (Array.isArray(data)) {
@@ -103,8 +131,18 @@ export const LogsProvider =({children})=>{
     }
   }
 
-  const handleSetFilterType=(val)=>setFilterType(val)
-  const handleSetSearchQuery=(val)=>setSearchQuery(val);
+  const handleSetProcessFilterType=(val)=>{
+    setProcessFilterType(val)
+  }
+  const handleSetProcessSearchQuery=(val)=>{
+    setProcessSearchQuery(val);
+  }
+  const handleSetFileIOFilterType=(val)=>{
+    setFileIOFilterType(val);
+  }
+  const handleSetFileIOSearchQuery=(val)=>{
+    setFileIOSearchQuery(val);
+  }
   const handleSetIsPaused=(bool)=>setIsPaused(bool)
    const formatTime = (timestamp) => {
         return new Date(timestamp).toLocaleTimeString('en-US', { 
@@ -115,7 +153,24 @@ export const LogsProvider =({children})=>{
         });
     };
     return(
-        <LogsContext.Provider value={{filterType,handleSetFilterType,filteredLogs,totalEvents,processStartCount,processStopCount,activePids,searchQuery,handleSetSearchQuery,sendControlCommand,formatTime,handleSetIsPaused,isPaused}}>
+        <LogsContext.Provider value={{
+          filteredProcessLogs,
+          processFilterType,
+          handleSetProcessFilterType,
+          processSearchQuery,
+          handleSetProcessSearchQuery,
+          activePids,
+          eventCounts,
+          filteredFileIOLogs,
+          fileIOFilterType,
+          handleSetFileIOFilterType,
+          fileIOSearchQuery,
+          handleSetFileIOSearchQuery,
+          sendControlCommand,
+          formatTime,
+          handleSetIsPaused,
+          isPaused
+          }}>
             {children}
         </LogsContext.Provider>
     )

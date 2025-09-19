@@ -1,5 +1,5 @@
 [{
-  "includePaths": ["C:\\Users", "C:\\Projects"],
+  "includePaths": ["C:\\users\\vishu\\Downloads","D:\\"],
   "excludePaths": ["C:\\Windows", "C:\\Program Files"],
-  "eventTypes": ["ProcessStart", "ProcessStop","FileIO"]
+  "eventTypes": ["FileRead","FileWrite","FileRename", "ProcessStart", "ProcessStop"]
 }]

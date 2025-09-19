@@ -22,6 +22,10 @@ const LogTree = ({currentLog,handleSetTreeResult,treeResult}) => {
     },[treeResult])
 
     const handleProcessTreeGeneration=async()=>{
+        if(currentLog?.EventType !=='ProcessStart' && currentLog?.EventType !== 'ProcessStop'){
+            toast.info("Log tree only works for processes.")
+            return
+        }
         setLoading(true)
         handleSetTreeResult(null)
         sendControlCommand("STOP")

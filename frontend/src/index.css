@@ -130,5 +130,10 @@
   button{
     @apply cursor-pointer;
   }
- 
+}
+
+@layer components{
+  .log-type-selector-div{
+    @apply border w-full text-center rounded cursor-pointer p-1;
+  }
 }

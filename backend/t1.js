@@ -2235,3 +2235,20 @@ const res=buildLogMap(data,targetLog)
         }
         ]
     }
+/**
+ [{
+  "includePaths": ["C:\\Users", "C:\\Projects"],
+  "excludePaths": ["C:\\Windows", "C:\\Program Files"],
+  "eventTypes": ["ProcessStart", "ProcessStop","FileIO"]
+}]
+"includePorts": [80, 443],
+"excludeIPs": ["127.0.0.1"]
+[
+  {
+    "includePaths": ["C:\\Users", "C:\\Projects"],
+    "excludePaths": ["C:\\Windows", "C:\\Program Files"],
+    "eventTypes": ["ProcessStart", "ProcessStop", "FileIO", "Network"]
+  }
+]
+
+ */

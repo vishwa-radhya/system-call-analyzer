@@ -30,14 +30,19 @@ class Program
         Console.WriteLine($"[SysWatch] Filters -> {filtersFile}");
 
         var filters = LoadFilters(filtersFile);
-
+        foreach (var f in filters)
+        {
+              Console.WriteLine($"EventTypes: {string.Join(",", f.EventTypes ?? new List<string>())}");
+        }
         // Open log stream for appending JSONL
-         logStream = new StreamWriter(new FileStream(logFile, FileMode.Append, FileAccess.Write, FileShare.ReadWrite)) { AutoFlush = true };
+        logStream = new StreamWriter(new FileStream(logFile, FileMode.Append, FileAccess.Write, FileShare.ReadWrite)) { AutoFlush = true };
         // Start ETW session
         using (var session = new TraceEventSession("SysWatchSession"))
         {
-            session.EnableKernelProvider(KernelTraceEventParser.Keywords.Process | KernelTraceEventParser.Keywords.FileIO);
+            session.EnableKernelProvider(KernelTraceEventParser.Keywords.Process | KernelTraceEventParser.Keywords.FileIO | KernelTraceEventParser.Keywords.FileIOInit);
+            session.EnableProvider(new Guid("7dd42a49-5329-4832-8dfd-43d979153a88"));
 
+            // Process start event
             session.Source.Kernel.ProcessStart += data =>
             {
                 if (_isPaused) return;
@@ -61,6 +66,7 @@ class Program
                 }
             };
 
+            // Process Stop Event
             session.Source.Kernel.ProcessStop += data =>
             {
                 if (_isPaused) return;
@@ -81,40 +87,111 @@ class Program
                 pidNameMap.Remove(data.ProcessID);
             };
 
-            // Optional File I/O events
+            // Network TcpConnect event
+            // session.Source.Dynamic.AddCallbackForProviderEvent("Microsoft-Windows-TCPIP", "TcpConnect", data =>
+            // {
+            //     if (_isPaused) return;
+            //     foreach (var name in data.PayloadNames)
+            //         {
+            //             Console.WriteLine($"{name}: {data.PayloadByName(name)}");
+            //         }
+            //     var record = new SysEvent
+            //     {
+            //         Timestamp = data.TimeStamp,
+            //         EventType = "Network",
+            //         ProcessName = data.ProcessName,
+            //         Pid = data.ProcessID,
+            //         Extra = new Dictionary<string, object>
+            //         {
+            //             ["Operation"] = "TcpConnect",
+            //             ["Protocol"] = "TCP",
+            //             ["LocalAddress"] = data.PayloadByName("saddr")?.ToString(),
+            //             ["LocalPort"] = data.PayloadByName("sport"),
+            //             ["RemoteAddress"] = data.PayloadByName("daddr")?.ToString(),
+            //             ["RemotePort"] = data.PayloadByName("dport")
+            //         }
+            //     };
+            //     if (PassesFilters(record, filters))
+            //         WriteJsonRecord(logStream!, record);
+            // });
+
+            // // Network TcpDisconnect event
+            // session.Source.Dynamic.AddCallbackForProviderEvent("Microsoft-Windows-TCPIP", "TcpDisconnect", data =>
+            // {
+            //     if (_isPaused) return;
+            //     var record = new SysEvent
+            //     {
+            //         Timestamp = data.TimeStamp,
+            //         EventType = "Network",
+            //         ProcessName = data.ProcessName,
+            //         Pid = data.ProcessID,
+            //         Extra = new Dictionary<string, object>
+            //         {
+            //             ["Operation"] = "TcpDisconnect",
+            //             ["Protocol"] = "TCP",
+            //             ["LocalAddress"] = data.PayloadByName("saddr")?.ToString(),
+            //             ["LocalPort"] = data.PayloadByName("sport"),
+            //             ["RemoteAddress"] = data.PayloadByName("daddr")?.ToString(),
+            //             ["RemotePort"] = data.PayloadByName("dport")
+            //         }
+            //     };
+
+            //     if (PassesFilters(record, filters))
+            //         WriteJsonRecord(logStream!, record);
+            // });
+
+            // File I/O events
             session.Source.Kernel.FileIORead += data =>
             {
                 if (_isPaused) return;
+                if (string.IsNullOrEmpty(data.FileName)) return;
                 var record = new SysEvent
                 {
                     Timestamp = data.TimeStamp,
-                    EventType = "FileIO",
+                    EventType = "FileRead",
                     ProcessName = data.ProcessName,
                     Pid = data.ProcessID,
                     FilePath = data.FileName
                 };
-
                 if (PassesFilters(record, filters))
                 {
-                    WriteJsonRecord(logStream, record);
+                    WriteJsonRecord(logStream!, record);
                 }
             };
 
             session.Source.Kernel.FileIOWrite += data =>
             {
                 if (_isPaused) return;
+                if (string.IsNullOrEmpty(data.FileName)) return;
                 var record = new SysEvent
                 {
                     Timestamp = data.TimeStamp,
-                    EventType = "FileIO",
+                    EventType = "FileWrite",
                     ProcessName = data.ProcessName,
                     Pid = data.ProcessID,
                     FilePath = data.FileName
                 };
-
                 if (PassesFilters(record, filters))
                 {
-                    WriteJsonRecord(logStream, record);
+                    WriteJsonRecord(logStream!, record);
+                }
+            };
+
+            session.Source.Kernel.FileIORename += data =>
+            {
+                if (_isPaused) return;
+                if (string.IsNullOrEmpty(data.FileName)) return;
+                var record = new SysEvent
+                {
+                    Timestamp = data.TimeStamp,
+                    EventType = "FileRename",
+                    ProcessName = data.ProcessName,
+                    Pid = data.ProcessID,
+                    FilePath = data.FileName
+                };
+                if (PassesFilters(record, filters))
+                {
+                    WriteJsonRecord(logStream!, record);
                 }
             };
 
@@ -178,37 +255,45 @@ class Program
 
     static List<FilterRule> LoadFilters(string path)
     {
-        if (!File.Exists(path))
+            if (!File.Exists(path))
         {
             Console.WriteLine($"[SysWatch] No filters.json found, logging everything...");
             return new List<FilterRule>();
         }
 
         string json = File.ReadAllText(path);
-        return JsonSerializer.Deserialize<List<FilterRule>>(json) ?? new List<FilterRule>();
+        var options = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        };
+        return JsonSerializer.Deserialize<List<FilterRule>>(json, options) ?? new List<FilterRule>();
     }
 
     static bool PassesFilters(SysEvent record, List<FilterRule> filters)
     {
-        foreach (var filter in filters)
+        if (filters.Count == 0)
+        return true; // no filters = log everything
+        var filter = filters[0]; // we only have one filter object in filters.json
+        // Event type filter (applies to all events)
+        if (filter.EventTypes != null && filter.EventTypes.Count > 0 &&
+            !filter.EventTypes.Contains(record.EventType, StringComparer.OrdinalIgnoreCase))
+            return false;
+         // File event filtering (apply to all File* events)
+        if (record.EventType.StartsWith("File", StringComparison.OrdinalIgnoreCase))
         {
-            if (filter.EventType != null &&
-                !string.Equals(record.EventType, filter.EventType, StringComparison.OrdinalIgnoreCase))
-                continue;
+            // Exclude paths
+            if (filter.ExcludePaths != null && filter.ExcludePaths.Count > 0 &&
+                record.FilePath != null &&
+                filter.ExcludePaths.Any(path => record.FilePath.StartsWith(path, StringComparison.OrdinalIgnoreCase)))
+                return false;
 
-            if (filter.ProcessName != null &&
-                (record.ProcessName == null ||
-                !record.ProcessName.Contains(filter.ProcessName, StringComparison.OrdinalIgnoreCase)))
-                continue;
-
-            if (filter.FilePath != null &&
+            // Include paths (if defined,match at least one)
+            if (filter.IncludePaths != null && filter.IncludePaths.Count > 0 &&
                 (record.FilePath == null ||
-                !record.FilePath.Contains(filter.FilePath, StringComparison.OrdinalIgnoreCase)))
-                continue;
-
-            return true; // passed one filter
+                !filter.IncludePaths.Any(path => record.FilePath.StartsWith(path, StringComparison.OrdinalIgnoreCase))))
+                return false;
         }
-        return filters.Count == 0; // no filters = log everything
+        return true;
     }
 }
 
@@ -226,7 +311,7 @@ class SysEvent
 // JSON schema for filters
 class FilterRule
 {
-    public string? EventType { get; set; }
-    public string? ProcessName { get; set; }
-    public string? FilePath { get; set; }
+    public List<string>? EventTypes { get; set; }
+    public List<string>? IncludePaths { get; set; }
+    public List<string>? ExcludePaths { get; set; }
 }

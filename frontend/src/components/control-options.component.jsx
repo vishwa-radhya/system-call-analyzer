@@ -5,13 +5,13 @@ import { useLogsContext } from "../contexts/logs-context.context";
 import { toast } from "sonner";
 
 const ControlOptions = ({isLogAnalyzerOpen,setIsLogAnalyzerOpen}) => {
-    const {sendControlCommand,filteredLogs,isPaused}=useLogsContext();
+    const {sendControlCommand,filteredProcessLogs,isPaused}=useLogsContext();
     const handlePlayPause=()=>{
         const command = isPaused ? "START" : "STOP";
         sendControlCommand(command);
       }
       const handleClearLogs=()=>{
-        if(filteredLogs.length===0){
+        if(filteredProcessLogs.length===0){
             toast.info('The log table is already cleared.')
         }
         sendControlCommand("CLEAR_LOGS")
