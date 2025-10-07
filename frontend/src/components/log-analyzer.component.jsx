@@ -35,7 +35,7 @@ const LogAnalyzer = ({isLogAnalyzerOpen,currentLog}) => {
                        return <div key={`selection-${index}`} onClick={()=>setCurrentSelection(index)} className={`px-6 py-1 rounded font-medium ${currentSelection===index && "bg-[white] shadow text-blue-700"}`}>{selection}</div>
                     })}
                 </div>
-                <div className=" w-full flex-1 min-h-0 overflow-hidden ">
+                <div className=" w-full flex-1 min-h-0 overflow-auto ">
                         {currentSelection===0 && <LogDetails currentLog={currentLog} />}
                         {currentSelection===1 && <LogAIAnalysis currentLog={currentLog} aiResult={aiResult} handleSetAiResult={handleSetAiResult}  />}
                         {currentSelection===2 && <LogTree currentLog={currentLog} treeResult={treeResult} handleSetTreeResult={handleSetTreeResult} />}

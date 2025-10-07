@@ -5,7 +5,7 @@ import { useLogsContext } from "../contexts/logs-context.context";
 
 
 const EventInputSelect = ({currentLogType}) => {
-    const {processSearchQuery,handleSetProcessSearchQuery,processFilterType,handleSetProcessFilterType,fileIOSearchQuery,handleSetFileIOSearchQuery,fileIOFilterType,handleSetFileIOFilterType}=useLogsContext();
+    const {processSearchQuery,handleSetProcessSearchQuery,processFilterType,handleSetProcessFilterType,fileIOSearchQuery,handleSetFileIOSearchQuery,fileIOFilterType,handleSetFileIOFilterType,networkSearchQuery,handleSetNetworkSearchQuery,networkFilterType,handleSetNetworkFilterType}=useLogsContext();
     return ( 
         <Fragment>
             {currentLogType === 0 && <Fragment>
@@ -35,6 +35,21 @@ const EventInputSelect = ({currentLogType}) => {
                     </SelectContent>
                 </Select>
             </Fragment>}
+            {
+                currentLogType===2 && <Fragment>
+                    <Input type="search" placeholder='Search Network...' value={networkSearchQuery} onChange={(e)=>handleSetNetworkSearchQuery(e.target.value)} className={'flex-grow w-auto'} />
+                     <Select value={networkFilterType} onValueChange={handleSetNetworkFilterType} >
+                    <SelectTrigger>
+                        <SelectValue placeholder='Select type'></SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="All Logs">All Logs</SelectItem>
+                        <SelectItem value="Network Connect">Netowrk Connect</SelectItem>
+                        <SelectItem value="Network Disconnect">Network Disconnect</SelectItem>
+                    </SelectContent>
+                </Select>
+                </Fragment>
+            }
         </Fragment>
      );
 }

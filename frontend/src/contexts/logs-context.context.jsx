@@ -18,6 +18,10 @@ export const LogsProvider =({children})=>{
     const [fileIOFilterType,setFileIOFilterType]=useState("All Logs");
     const [fileIOSearchQuery,setFileIOSearchQuery]=useState("");
 
+    // Network data
+    const [networkLogs,setNetworkLogs]=useState([]);
+    const [networkFilterType,setNetworkFilterType]=useState("All Logs");
+    const [networkSearchQuery,setNetworkSearchQuery]=useState("");
     
     // websocket in a ref to use across components
     const wsRef = useRef(null);
@@ -54,6 +58,19 @@ export const LogsProvider =({children})=>{
       return result;
     },[fileIOLogs,fileIOFilterType,fileIOSearchQuery])
 
+    const filteredNetworkLogs=useMemo(()=>{
+      let result = networkLogs;
+      if(networkFilterType==="Network Connect"){
+        result = result.filter((log)=>log.EventType==="NetworkConnect");
+      }else if(networkFilterType==="Network Disconnect"){
+        result = result.filter((log)=>log.EventType==="NetworkDisconnect");
+      }
+      if(networkFilterType.trim() !== ""){
+        result = result.filter((log)=>log?.ProcessName?.toLowerCase().includes(networkSearchQuery.toLowerCase()))
+      }
+      return result;
+    },[networkLogs,networkFilterType,networkSearchQuery])
+
     // websocket useEffect
     useEffect(() => {
     const ws = new WebSocket("ws://localhost:8080");
@@ -70,6 +87,8 @@ export const LogsProvider =({children})=>{
               setProcessLogs([]);
               setEventCounts({});
               setActivePids(new Set());
+              setFileIOLogs([]);
+              setNetworkLogs([]);
               toast.success("Logs cleared successfully!");
             }else{
               if(data.action==="STOP"){
@@ -101,6 +120,9 @@ export const LogsProvider =({children})=>{
           }
           if(log.EventType==="FileRead" || log.EventType==="FileWrite" || log.EventType==="FileRename"){
             setFileIOLogs((prev)=>[log,...prev])
+          }
+          if(log.EventType==="NetworkConnect" || log.EventType==="NetworkDisconnect"){
+            setNetworkLogs((prev)=>[log,...prev]);
           }
           setEventCounts((prev)=>({
             ...prev,
@@ -143,6 +165,12 @@ export const LogsProvider =({children})=>{
   const handleSetFileIOSearchQuery=(val)=>{
     setFileIOSearchQuery(val);
   }
+  const handleSetNetworkFilterType=(val)=>{
+    setNetworkFilterType(val);
+  }
+  const handleSetNetworkSearchQuery=(val)=>{
+    setNetworkSearchQuery(val);
+  }
   const handleSetIsPaused=(bool)=>setIsPaused(bool)
    const formatTime = (timestamp) => {
         return new Date(timestamp).toLocaleTimeString('en-US', { 
@@ -166,6 +194,11 @@ export const LogsProvider =({children})=>{
           handleSetFileIOFilterType,
           fileIOSearchQuery,
           handleSetFileIOSearchQuery,
+          filteredNetworkLogs,
+          networkFilterType,
+          handleSetNetworkFilterType,
+          networkSearchQuery,
+          handleSetNetworkSearchQuery,
           sendControlCommand,
           formatTime,
           handleSetIsPaused,

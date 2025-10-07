@@ -17,8 +17,8 @@ class Program
         {
             Console.WriteLine("[SysWatch ERROR]: Please run as Administrator.");
         }
-            // run stdin listener in background
-            Task.Run(() => ListenForComands());
+        // run stdin listener in background
+        Task.Run(() => ListenForComands());
         string projectRoot = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", ".."));
         string logsDir = Path.Combine(projectRoot, "logs");
         Directory.CreateDirectory(logsDir);
@@ -32,15 +32,14 @@ class Program
         var filters = LoadFilters(filtersFile);
         foreach (var f in filters)
         {
-              Console.WriteLine($"EventTypes: {string.Join(",", f.EventTypes ?? new List<string>())}");
+            Console.WriteLine($"EventTypes: {string.Join(",", f.EventTypes ?? new List<string>())}");
         }
         // Open log stream for appending JSONL
         logStream = new StreamWriter(new FileStream(logFile, FileMode.Append, FileAccess.Write, FileShare.ReadWrite)) { AutoFlush = true };
         // Start ETW session
         using (var session = new TraceEventSession("SysWatchSession"))
         {
-            session.EnableKernelProvider(KernelTraceEventParser.Keywords.Process | KernelTraceEventParser.Keywords.FileIO | KernelTraceEventParser.Keywords.FileIOInit);
-            session.EnableProvider(new Guid("7dd42a49-5329-4832-8dfd-43d979153a88"));
+            session.EnableKernelProvider(KernelTraceEventParser.Keywords.Process | KernelTraceEventParser.Keywords.FileIO | KernelTraceEventParser.Keywords.FileIOInit | KernelTraceEventParser.Keywords.NetworkTCPIP);
 
             // Process start event
             session.Source.Kernel.ProcessStart += data =>
@@ -86,59 +85,54 @@ class Program
                 }
                 pidNameMap.Remove(data.ProcessID);
             };
-
-            // Network TcpConnect event
-            // session.Source.Dynamic.AddCallbackForProviderEvent("Microsoft-Windows-TCPIP", "TcpConnect", data =>
-            // {
-            //     if (_isPaused) return;
-            //     foreach (var name in data.PayloadNames)
-            //         {
-            //             Console.WriteLine($"{name}: {data.PayloadByName(name)}");
-            //         }
-            //     var record = new SysEvent
-            //     {
-            //         Timestamp = data.TimeStamp,
-            //         EventType = "Network",
-            //         ProcessName = data.ProcessName,
-            //         Pid = data.ProcessID,
-            //         Extra = new Dictionary<string, object>
-            //         {
-            //             ["Operation"] = "TcpConnect",
-            //             ["Protocol"] = "TCP",
-            //             ["LocalAddress"] = data.PayloadByName("saddr")?.ToString(),
-            //             ["LocalPort"] = data.PayloadByName("sport"),
-            //             ["RemoteAddress"] = data.PayloadByName("daddr")?.ToString(),
-            //             ["RemotePort"] = data.PayloadByName("dport")
-            //         }
-            //     };
-            //     if (PassesFilters(record, filters))
-            //         WriteJsonRecord(logStream!, record);
-            // });
-
-            // // Network TcpDisconnect event
-            // session.Source.Dynamic.AddCallbackForProviderEvent("Microsoft-Windows-TCPIP", "TcpDisconnect", data =>
-            // {
-            //     if (_isPaused) return;
-            //     var record = new SysEvent
-            //     {
-            //         Timestamp = data.TimeStamp,
-            //         EventType = "Network",
-            //         ProcessName = data.ProcessName,
-            //         Pid = data.ProcessID,
-            //         Extra = new Dictionary<string, object>
-            //         {
-            //             ["Operation"] = "TcpDisconnect",
-            //             ["Protocol"] = "TCP",
-            //             ["LocalAddress"] = data.PayloadByName("saddr")?.ToString(),
-            //             ["LocalPort"] = data.PayloadByName("sport"),
-            //             ["RemoteAddress"] = data.PayloadByName("daddr")?.ToString(),
-            //             ["RemotePort"] = data.PayloadByName("dport")
-            //         }
-            //     };
-
-            //     if (PassesFilters(record, filters))
-            //         WriteJsonRecord(logStream!, record);
-            // });
+            // Nwtwork Connect Event
+            session.Source.Kernel.TcpIpConnect += data =>
+            {
+                var record = new SysEvent
+                {
+                    Timestamp = data.TimeStamp,
+                    EventType = "NetworkConnect",
+                    ProcessName = data.ProcessName,
+                    Pid = data.ProcessID,
+                    Extra = new Dictionary<string, object>
+                    {
+                        ["Operation"] = "Connect",
+                        ["Protocol"] = "TCP",
+                        ["LocalAddress"] = data.saddr.ToString(),
+                        ["LocalPort"] = data.sport,
+                        ["RemoteAddress"] = data.daddr.ToString(),
+                        ["RemotePort"] = data.dport
+                    }
+                };
+                if (PassesFilters(record, filters))
+                {
+                    WriteJsonRecord(logStream!, record);
+                }
+            };
+            // Network Disconnect Event
+            session.Source.Kernel.TcpIpDisconnect += data =>
+            {
+                var record = new SysEvent
+                {
+                    Timestamp = data.TimeStamp,
+                    EventType = "NetworkDisconnect",
+                    ProcessName = data.ProcessName,
+                    Pid = data.ProcessID,
+                    Extra = new Dictionary<string, object>
+                    {
+                        ["Operation"] = "Disconnect",
+                        ["Protocol"] = "TCP",
+                        ["LocalAddress"] = data.saddr.ToString(),
+                        ["LocalPort"] = data.sport,
+                        ["RemoteAddress"] = data.daddr.ToString(),
+                        ["RemotePort"] = data.dport
+                    }
+                };
+                if (PassesFilters(record, filters))
+                {
+                    WriteJsonRecord(logStream!, record);
+                }
+            };
 
             // File I/O events
             session.Source.Kernel.FileIORead += data =>
@@ -221,7 +215,8 @@ class Program
                     string logFile = Path.Combine(logsDir, "SysWatch.jsonl");
                     logStream = new StreamWriter(
                         new FileStream(logFile, FileMode.Append, FileAccess.Write, FileShare.ReadWrite)
-                    ){ AutoFlush = true };
+                    )
+                    { AutoFlush = true };
                     Console.WriteLine("[SysWatch] Logging resumed and file hanlde reopened.");
                     break;
                 case "EXIT":
@@ -255,7 +250,7 @@ class Program
 
     static List<FilterRule> LoadFilters(string path)
     {
-            if (!File.Exists(path))
+        if (!File.Exists(path))
         {
             Console.WriteLine($"[SysWatch] No filters.json found, logging everything...");
             return new List<FilterRule>();
@@ -272,13 +267,13 @@ class Program
     static bool PassesFilters(SysEvent record, List<FilterRule> filters)
     {
         if (filters.Count == 0)
-        return true; // no filters = log everything
+            return true; // no filters = log everything
         var filter = filters[0]; // we only have one filter object in filters.json
         // Event type filter (applies to all events)
         if (filter.EventTypes != null && filter.EventTypes.Count > 0 &&
             !filter.EventTypes.Contains(record.EventType, StringComparer.OrdinalIgnoreCase))
             return false;
-         // File event filtering (apply to all File* events)
+        // File event filtering (apply to all File* events)
         if (record.EventType.StartsWith("File", StringComparison.OrdinalIgnoreCase))
         {
             // Exclude paths

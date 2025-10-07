@@ -1,5 +1,5 @@
 import { Fragment } from "react";
-import { Activity,CirclePlay,CircleX,Cpu,FileBox,FileOutput,FileInput,FilePen } from "lucide-react";
+import { Activity,CirclePlay,CircleX,Cpu,FileBox,FileOutput,FileInput,FilePen,ArrowUpDown,Cloud,CloudOff } from "lucide-react";
 import { useLogsContext } from "../contexts/logs-context.context";
 import InfoCard from "./info-card.component";
 
@@ -18,6 +18,11 @@ const EventInfoCards = ({currentLogType}) => {
             <InfoCard name='File Reads' val={eventCounts?.FileRead || 0} Icon={FileOutput} content={'Total number of file reads'} iconColor={'green'} />
             <InfoCard name='File Writes' val={eventCounts?.FileWrite || 0} Icon={FileInput} content={'Total number of file writes'} iconColor={'red'} />
             <InfoCard name='File Renames' val={eventCounts?.FileRename || 0} Icon={FilePen} content={'Total number of file renames'}  iconColor={'purple'} />
+            </Fragment>}
+            {currentLogType===2 && <Fragment>
+                <InfoCard name='Total Network Events' val={((eventCounts?.NetworkConnect || 0)+(eventCounts?.NetworkDisconnect || 0)) || 0} content={'Total Network events logged by System'} Icon={ArrowUpDown} iconColor={'blue'} />
+                <InfoCard name='Network Connect' val={eventCounts?.NetworkConnect || 0} content={'Total number of network connects'} Icon={Cloud} iconColor={'green'} />
+                <InfoCard name='Network Disconnect' val={eventCounts?.NetworkDisconnect || 0} content={'Total number of network disconnects'} Icon={CloudOff} iconColor={'red'} />
             </Fragment>}
         </Fragment>
      );

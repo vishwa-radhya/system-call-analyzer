@@ -52,6 +52,7 @@ const LogDetails = ({currentLog}) => {
                 </div>
             </div>}
             {currentLog?.Extra && <Fragment>
+                {(currentLog?.EventType !== "NetworkConnect" && currentLog?.EventType !== "NetworkDisconnect") && <Fragment>
                 <div className="flex flex-col gap-1">
                 <p>PARENT PID</p>
                 <div className="border p-3 rounded">
@@ -64,6 +65,47 @@ const LogDetails = ({currentLog}) => {
                     {currentLog?.Extra?.ImageFileName || 'UNKNOWN'}
                 </div>
             </div>
+                </Fragment>}
+            {
+                (currentLog?.EventType==="NetworkConnect" || currentLog?.EventType==="NetworkDisconnect") && <Fragment>
+                    <div className="flex flex-col gap-1">
+                        <p>OPERATION</p>
+                        <div className="border p-3 rounded">
+                            {currentLog?.Extra?.Operation || 'UNKNOWN'}
+                        </div>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                        <p>PROTOCOL</p>
+                        <div className="border p-3 rounded">
+                            {currentLog?.Extra?.Protocol || 'UNKNOWN'}
+                        </div>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                        <p>LOCAL ADDRESS</p>
+                        <div className="border p-3 rounded">
+                            {currentLog?.Extra?.LocalAddress || 'UNKNOWN'}
+                        </div>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                        <p>LOCAL PORT</p>
+                        <div className="border p-3 rounded">
+                            {currentLog?.Extra?.LocalPort || 'UNKNOWN'}
+                        </div>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                        <p>REMOTE ADDRESS</p>
+                        <div className="border p-3 rounded">
+                            {currentLog?.Extra?.RemoteAddress || 'UNKNOWN'}
+                        </div>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                        <p>REMOTE PORT</p>
+                        <div className="border p-3 rounded">
+                            {currentLog?.Extra?.RemotePort || 'UNKNOWN'}
+                        </div>
+                    </div>
+                </Fragment>
+            }
             </Fragment>}
         </div>
      );

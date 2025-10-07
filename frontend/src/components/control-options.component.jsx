@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import OptionButton from "./option-button.component";
-import { Play,Pause,Trash,Download,X,LayoutPanelLeft } from "lucide-react";
+import { Play,Pause,Trash,X,LayoutPanelLeft } from "lucide-react";
 import { useLogsContext } from "../contexts/logs-context.context";
 import { toast } from "sonner";
 

@@ -5,12 +5,13 @@ import LogAnalyzer from "../components/log-analyzer.component";
 import { useState } from "react";
 import ProcessTable from "../components/process-table.component";
 import FileTable from "../components/file-table.component";
+import NetworkTable from "../components/network-table.component";
 import LogTypeSelector from "../components/log-type-selector.component";
 import EventInfoCards from "../components/event-infocards.component";
 import EventInputSelect from '../components/event-input-select.component';
 
 const Home = () => {
-    const {filteredProcessLogs,filteredFileIOLogs}=useLogsContext();
+    const {filteredProcessLogs,filteredFileIOLogs,filteredNetworkLogs}=useLogsContext();
     const [isLogAnalyzerOpen,setIsLogAnalyzerOpen]=useState(true);
     const [currentLogType,setCurrentLogType]=useState(0);
     const [currentLog,setCurrentLog]=useState(null);
@@ -34,6 +35,7 @@ const Home = () => {
                         <div className="p-2 h-[420px] overflow-y-auto">
                             {currentLogType === 0 && <ProcessTable filteredLogs={filteredProcessLogs} handleLogClick={handleLogClick} />}
                             {currentLogType === 1 && <FileTable filteredLogs={filteredFileIOLogs} handleLogClick={handleLogClick} />}
+                            {currentLogType === 2 && <NetworkTable filteredLogs={filteredNetworkLogs} handleLogClick={handleLogClick} />}
                         </div>
                     </div>
                     <div className=" grow p-1 grid gap-2 grid-cols-[repeat(auto-fit,minmax(270px,1fr))]">

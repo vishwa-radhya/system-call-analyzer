@@ -288,6 +288,7 @@ wss.on("connection", (ws) => {
             // resuming .NET after delay
             setTimeout(()=>{
               dotnetProcess.stdin.write("START\n");
+              ws.send(JSON.stringify({type:"ACK",action:"START"}));
               console.log("sent control:","START");
             },200);
             break;

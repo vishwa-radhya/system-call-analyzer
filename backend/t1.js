@@ -2250,5 +2250,10 @@ const res=buildLogMap(data,targetLog)
     "eventTypes": ["ProcessStart", "ProcessStop", "FileIO", "Network"]
   }
 ]
+[{
+  "includePaths": ["C:\\users\\vishu\\Downloads","D:\\"],
+  "excludePaths": ["C:\\Windows", "C:\\Program Files"],
+  "eventTypes": ["FileRead","FileWrite","FileRename", "ProcessStart", "ProcessStop"]
+}]
 
  */
