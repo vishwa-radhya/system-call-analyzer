@@ -1,5 +1,5 @@
 [{
-  "includePaths": ["C:\\users\\vishu\\Downloads","D:\\"],
+  "includePaths": ["C:\\users\\vishu\\testWatch"],
   "excludePaths": ["C:\\Windows", "C:\\Program Files"],
   "eventTypes": ["NetworkConnect","NetworkDisconnect","FileRead","FileWrite","FileRename", "ProcessStart", "ProcessStop"]
 }]

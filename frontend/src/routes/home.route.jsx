@@ -12,7 +12,7 @@ import EventInputSelect from '../components/event-input-select.component';
 
 const Home = () => {
     const {filteredProcessLogs,filteredFileIOLogs,filteredNetworkLogs}=useLogsContext();
-    const [isLogAnalyzerOpen,setIsLogAnalyzerOpen]=useState(true);
+    const [isLogAnalyzerOpen,setIsLogAnalyzerOpen]=useState(false);
     const [currentLogType,setCurrentLogType]=useState(0);
     const [currentLog,setCurrentLog]=useState(null);
     const handleLogClick=(log)=>{

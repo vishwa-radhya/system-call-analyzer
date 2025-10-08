@@ -8,18 +8,46 @@ export const LogsProvider =({children})=>{
     const [eventCounts,setEventCounts]=useState({});
 
     // process Data
-    const [processLogs,setProcessLogs]=useState([]);
+    const [processLogs,setProcessLogs]=useState([
+      {"Timestamp":"2025-10-08T16:52:21.5816588+05:30","EventType":"ProcessStop","ProcessName":"RuntimeBroker","Pid":12188,"FilePath":null,"Extra":null},
+{"Timestamp":"2025-10-08T16:52:21.8289296+05:30","EventType":"ProcessStop","ProcessName":"dllhost","Pid":18036,"FilePath":null,"Extra":null},
+{"Timestamp":"2025-10-08T16:52:21.8289296+05:30","EventType":"ProcessStop","ProcessName":"dllhost","Pid":18036,"FilePath":null,"Extra":null},
+{"Timestamp":"2025-10-08T16:52:21.8289296+05:30","EventType":"ProcessStop","ProcessName":"dllhost","Pid":18036,"FilePath":null,"Extra":null},
+{"Timestamp":"2025-10-08T16:52:21.8289296+05:30","EventType":"ProcessStop","ProcessName":"dllhost","Pid":18036,"FilePath":null,"Extra":null},
+{"Timestamp":"2025-10-08T16:52:21.8289296+05:30","EventType":"ProcessStop","ProcessName":"dllhost","Pid":18036,"FilePath":null,"Extra":null},
+{"Timestamp":"2025-10-08T16:52:21.8289296+05:30","EventType":"ProcessStop","ProcessName":"dllhost","Pid":18036,"FilePath":null,"Extra":null},
+{"Timestamp":"2025-10-08T16:52:21.8289296+05:30","EventType":"ProcessStop","ProcessName":"dllhost","Pid":18036,"FilePath":null,"Extra":null},
+{"Timestamp":"2025-10-08T16:52:21.8289296+05:30","EventType":"ProcessStop","ProcessName":"dllhost","Pid":18036,"FilePath":null,"Extra":null},
+{"Timestamp":"2025-10-08T16:52:21.8289296+05:30","EventType":"ProcessStop","ProcessName":"dllhost","Pid":18036,"FilePath":null,"Extra":null},
+{"Timestamp":"2025-10-08T16:52:21.8289296+05:30","EventType":"ProcessStop","ProcessName":"dllhost","Pid":18036,"FilePath":null,"Extra":null},
+{"Timestamp":"2025-10-08T16:52:21.8289296+05:30","EventType":"ProcessStop","ProcessName":"dllhost","Pid":18036,"FilePath":null,"Extra":null},
+{"Timestamp":"2025-10-08T16:52:21.8289296+05:30","EventType":"ProcessStop","ProcessName":"dllhost","Pid":18036,"FilePath":null,"Extra":null},
+{"Timestamp":"2025-10-08T16:52:21.8289296+05:30","EventType":"ProcessStop","ProcessName":"dllhost","Pid":18036,"FilePath":null,"Extra":null},
+    ]);
     const [processFilterType,setProcessFilterType]=useState("All Logs");
     const [processSearchQuery,setProcessSearchQuery]=useState("");
     const [activePids, setActivePids] = useState(new Set());
 
     //FileIO data
-    const [fileIOLogs,setFileIOLogs]=useState([]);
+    const [fileIOLogs,setFileIOLogs]=useState([
+      {"Timestamp":"2025-10-08T16:52:22.8732157+05:30","EventType":"FileRename","ProcessName":"explorer","Pid":21976,"FilePath":"C:\\Users\\vishu\\testWatch\\ff.txt","Extra":null},
+{"Timestamp":"2025-10-08T16:52:22.9015171+05:30","EventType":"FileRead","ProcessName":"SearchProtocolHost","Pid":6556,"FilePath":"C:\\Users\\vishu\\testWatch\\frr.txt","Extra":null},
+{"Timestamp":"2025-10-08T16:52:23.0150887+05:30","EventType":"FileRead","ProcessName":"SearchProtocolHost","Pid":6556,"FilePath":"C:\\Users\\vishu\\testWatch\\frr.txt","Extra":null},
+{"Timestamp":"2025-10-08T16:52:23.0372435+05:30","EventType":"FileRead","ProcessName":"SearchProtocolHost","Pid":6556,"FilePath":"C:\\Users\\vishu\\testWatch\\frr.txt","Extra":null}
+    ]);
     const [fileIOFilterType,setFileIOFilterType]=useState("All Logs");
     const [fileIOSearchQuery,setFileIOSearchQuery]=useState("");
 
     // Network data
-    const [networkLogs,setNetworkLogs]=useState([]);
+    const [networkLogs,setNetworkLogs]=useState([
+       {"Timestamp":"2025-10-08T16:51:32.5732536+05:30","EventType":"NetworkDisconnect","ProcessName":"helper","Pid":2692,"FilePath":null,"Extra":{"Operation":"Disconnect","Protocol":"TCP","LocalAddress":"10.2.25.106","LocalPort":14350,"RemoteAddress":"52.23.19.168","RemotePort":443}},
+{"Timestamp":"2025-10-08T16:51:34.7692535+05:30","EventType":"NetworkDisconnect","ProcessName":"chrome","Pid":10708,"FilePath":null,"Extra":{"Operation":"Disconnect","Protocol":"TCP","LocalAddress":"127.0.0.1","LocalPort":35479,"RemoteAddress":"127.0.0.1","RemotePort":9229}},
+{"Timestamp":"2025-10-08T16:51:34.9401331+05:30","EventType":"NetworkConnect","ProcessName":"svchost","Pid":2512,"FilePath":null,"Extra":{"Operation":"Connect","Protocol":"TCP","LocalAddress":"10.2.25.106","LocalPort":61115,"RemoteAddress":"23.211.60.150","RemotePort":80}},
+{"Timestamp":"2025-10-08T16:51:34.9678058+05:30","EventType":"NetworkDisconnect","ProcessName":"svchost","Pid":2512,"FilePath":null,"Extra":{"Operation":"Disconnect","Protocol":"TCP","LocalAddress":"10.2.25.106","LocalPort":61115,"RemoteAddress":"23.211.60.150","RemotePort":80}},
+{"Timestamp":"2025-10-08T16:51:37.8985691+05:30","EventType":"NetworkConnect","ProcessName":"helper","Pid":2692,"FilePath":null,"Extra":{"Operation":"Connect","Protocol":"TCP","LocalAddress":"10.2.25.106","LocalPort":35065,"RemoteAddress":"3.217.19.244","RemotePort":443}},
+{"Timestamp":"2025-10-08T16:51:38.4111382+05:30","EventType":"NetworkDisconnect","ProcessName":"helper","Pid":2692,"FilePath":null,"Extra":{"Operation":"Disconnect","Protocol":"TCP","LocalAddress":"10.2.25.106","LocalPort":35065,"RemoteAddress":"3.217.19.244","RemotePort":443}},
+{"Timestamp":"2025-10-08T16:51:38.8390383+05:30","EventType":"NetworkDisconnect","ProcessName":"chrome","Pid":10708,"FilePath":null,"Extra":{"Operation":"Disconnect","Protocol":"TCP","LocalAddress":"127.0.0.1","LocalPort":35064,"RemoteAddress":"127.0.0.1","RemotePort":9229}}
+    ]);
     const [networkFilterType,setNetworkFilterType]=useState("All Logs");
     const [networkSearchQuery,setNetworkSearchQuery]=useState("");
     

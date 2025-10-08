@@ -5,6 +5,7 @@ import { useLogsContext } from "../contexts/logs-context.context";
  */
 const FileTable = ({filteredLogs,handleLogClick}) => {
     const {formatTime}=useLogsContext();
+    // console.log('h')
     return ( 
          <Table>
             <TableHeader className="sticky top-0 bg-gray-50 text-[15px]">
