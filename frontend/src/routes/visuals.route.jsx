@@ -9,6 +9,7 @@ const Visuals = () => {
             <div className="p-2 border">
                 <EventTimelineChart processLogs={filteredProcessLogs} fileIOLogs={filteredFileIOLogs} networkLogs={filteredNetworkLogs} />
                 <EventCountBarChart processLogs={filteredProcessLogs} fileIOLogs={filteredFileIOLogs} networkLogs={filteredNetworkLogs} />
+                
             </div>
         </div>
      );
