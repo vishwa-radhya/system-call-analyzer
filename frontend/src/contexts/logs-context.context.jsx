@@ -9,20 +9,12 @@ export const LogsProvider =({children})=>{
 
     // process Data
     const [processLogs,setProcessLogs]=useState([
-      {"Timestamp":"2025-10-08T16:52:21.5816588+05:30","EventType":"ProcessStop","ProcessName":"RuntimeBroker","Pid":12188,"FilePath":null,"Extra":null},
-{"Timestamp":"2025-10-08T16:52:21.8289296+05:30","EventType":"ProcessStop","ProcessName":"dllhost","Pid":18036,"FilePath":null,"Extra":null},
-{"Timestamp":"2025-10-08T16:52:21.8289296+05:30","EventType":"ProcessStop","ProcessName":"dllhost","Pid":18036,"FilePath":null,"Extra":null},
-{"Timestamp":"2025-10-08T16:52:21.8289296+05:30","EventType":"ProcessStop","ProcessName":"dllhost","Pid":18036,"FilePath":null,"Extra":null},
-{"Timestamp":"2025-10-08T16:52:21.8289296+05:30","EventType":"ProcessStop","ProcessName":"dllhost","Pid":18036,"FilePath":null,"Extra":null},
-{"Timestamp":"2025-10-08T16:52:21.8289296+05:30","EventType":"ProcessStop","ProcessName":"dllhost","Pid":18036,"FilePath":null,"Extra":null},
-{"Timestamp":"2025-10-08T16:52:21.8289296+05:30","EventType":"ProcessStop","ProcessName":"dllhost","Pid":18036,"FilePath":null,"Extra":null},
-{"Timestamp":"2025-10-08T16:52:21.8289296+05:30","EventType":"ProcessStop","ProcessName":"dllhost","Pid":18036,"FilePath":null,"Extra":null},
-{"Timestamp":"2025-10-08T16:52:21.8289296+05:30","EventType":"ProcessStop","ProcessName":"dllhost","Pid":18036,"FilePath":null,"Extra":null},
-{"Timestamp":"2025-10-08T16:52:21.8289296+05:30","EventType":"ProcessStop","ProcessName":"dllhost","Pid":18036,"FilePath":null,"Extra":null},
-{"Timestamp":"2025-10-08T16:52:21.8289296+05:30","EventType":"ProcessStop","ProcessName":"dllhost","Pid":18036,"FilePath":null,"Extra":null},
-{"Timestamp":"2025-10-08T16:52:21.8289296+05:30","EventType":"ProcessStop","ProcessName":"dllhost","Pid":18036,"FilePath":null,"Extra":null},
-{"Timestamp":"2025-10-08T16:52:21.8289296+05:30","EventType":"ProcessStop","ProcessName":"dllhost","Pid":18036,"FilePath":null,"Extra":null},
-{"Timestamp":"2025-10-08T16:52:21.8289296+05:30","EventType":"ProcessStop","ProcessName":"dllhost","Pid":18036,"FilePath":null,"Extra":null},
+     {"Timestamp":"2025-10-08T12:41:05.887Z","EventType":"ProcessStop","ProcessName":"RuntimeBroker","Pid":12188,"FilePath":null,"Extra":null},
+{"Timestamp":"2025-10-08T12:41:05.887Z","EventType":"ProcessStop","ProcessName":"dllhost","Pid":18036,"FilePath":null,"Extra":null},
+{"Timestamp":"2025-10-08T12:41:05.887Z","EventType":"ProcessStop","ProcessName":"dllhost","Pid":18036,"FilePath":null,"Extra":null},
+{"Timestamp":"2025-10-08T12:41:05.887Z","EventType":"ProcessStop","ProcessName":"dllhost","Pid":18036,"FilePath":null,"Extra":null},
+{"Timestamp":"2025-10-08T12:41:05.887Z","EventType":"ProcessStop","ProcessName":"dllhost","Pid":18036,"FilePath":null,"Extra":null},
+{"Timestamp":"2025-10-08T12:41:05.887Z","EventType":"ProcessStop","ProcessName":"dllhost","Pid":18036,"FilePath":null,"Extra":null},
     ]);
     const [processFilterType,setProcessFilterType]=useState("All Logs");
     const [processSearchQuery,setProcessSearchQuery]=useState("");
