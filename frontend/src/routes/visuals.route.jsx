@@ -1,6 +1,11 @@
 import EventTimelineChart from "../components/visual-components/event-timeline-chart.component";
 import EventCountBarChart from "../components/visual-components/event-count-bar-chart.component";
 import { useLogsContext } from "../contexts/logs-context.context";
+import AnomalyDonutChart from "../components/visual-components/anomaly-donut-chart.component";
+import TopProcessesBarChart from "../components/visual-components/top-processes-bar-chart.component";
+import EventDensityAreaChart from "../components/visual-components/event-density-area-chart.component";
+import EventDistributionDonutChart from "../components/visual-components/event-distribution-donut-chart.component";
+import AnomalyDensityAreaChart from "../components/visual-components/anomaly-density-area-chart.component";
 const Visuals = () => {
     const {filteredProcessLogs,filteredFileIOLogs,filteredNetworkLogs}=useLogsContext();
     return ( 
@@ -9,7 +14,11 @@ const Visuals = () => {
             <div className="p-2 border">
                 <EventTimelineChart processLogs={filteredProcessLogs} fileIOLogs={filteredFileIOLogs} networkLogs={filteredNetworkLogs} />
                 <EventCountBarChart processLogs={filteredProcessLogs} fileIOLogs={filteredFileIOLogs} networkLogs={filteredNetworkLogs} />
-                
+                <AnomalyDonutChart />
+                <TopProcessesBarChart/>
+                <EventDensityAreaChart/>
+                <EventDistributionDonutChart/>
+                <AnomalyDensityAreaChart/>
             </div>
         </div>
      );
