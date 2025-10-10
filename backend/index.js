@@ -10,6 +10,7 @@ import cors from 'cors';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config()
+import { detectAnomalies } from "./anomaly-detector.js";
 
 const app = express();
 app.use(express.json());
@@ -198,6 +199,9 @@ dotnetProcess.on("exit", (code) => {
 
 const historyBuffer = [];
 const MAX_HISTORY=100;
+let position = 0;
+let buffer = "";
+let activeClient=null;
 
 function addToHistory(log){
   historyBuffer.push(log);
@@ -206,107 +210,127 @@ function addToHistory(log){
   }
 }
 
-let position = 0;
-function tailFile(filePath, onLine) {
-  let buffer = "";
-  setInterval(async () => {
-    try {
-      const stats = await fs.promises.stat(filePath);
-      if (stats.size > position) {
-        const fd = await fs.promises.open(filePath, "r");
-        const { bytesRead, buffer: chunk } = await fd.read({
-          buffer: Buffer.alloc(stats.size - position),
-          position,
-        });
-        fd.close();
-        position += bytesRead;
-        buffer += chunk.toString("utf8");
-        let lines = buffer.split("\n");
-        buffer = lines.pop() || ""; // keep partial line
-        for (const line of lines) {
-          if (line.trim()) {
-            try {
-              onLine(JSON.parse(line));
-            } catch (e) {
-              console.error("Failed to parse line:", line);
-            }
-          }
-        }
-      }
-    } catch (err) {
-      console.log("file might not exist yet",err);
-    }
-  }, 500);
-}
-
 function resetTailPosition(){
   position=0;
+  buffer="";
 }
 
-wss.on("connection", (ws) => {
-  console.log("Client connected");
-    if(ws.readyState===ws.OPEN){
-      ws.send(JSON.stringify(historyBuffer))
-    }
-  tailFile(logFilePath, (jsonLine) => {
-    addToHistory(jsonLine)
-    if (ws.readyState === ws.OPEN) {
-      ws.send(JSON.stringify(jsonLine));
-    }
-  });
-  ws.on('message',async(msg)=>{
-    try{
-      const str = msg.toString().trim();
-      const data = JSON.parse(str);
-      if(data.type==="CONTROL"){
-        if(!dotnetProcess.stdin.writable){
-          console.error(".NET process stdin not writable");
-          ws.send(JSON.stringify({type:"ERROR",action:data.action,message:"Process stdin not writable"}));
-          return;
-        }
-        switch(data.action){
-          case "CLEAR_LOGS":
-            dotnetProcess.stdin.write("STOP\n");
-            console.log("sent control:","STOP");
-            // waiting 100ms for .NET to pause
-            await new Promise((res)=>setTimeout(res,100));
-            // clear log file
-            await new Promise((resolve,reject)=>{
-              fs.truncate(logFilePath,0,(err)=>{
-                if(err){
-                  console.error("Failed to clear logs:",err);
-                  reject(err);
-                }else{
-                  console.log("Logs cleared");
-                  resolve();
-                  resetTailPosition();
-                }
-              })
-            })
-            // ACK to frontend
-            ws.send(JSON.stringify({type:"ACK",action:"CLEAR_LOGS"}));
-            // resuming .NET after delay
-            setTimeout(()=>{
-              dotnetProcess.stdin.write("START\n");
-              ws.send(JSON.stringify({type:"ACK",action:"START"}));
-              console.log("sent control:","START");
-            },200);
-            break;
+async function readNewLines(filePath,onLine){
+  try {
+    const stats = await fs.promises.stat(filePath);
 
-          default:
-            dotnetProcess.stdin.write(data.action+"\n");
-            ws.send(JSON.stringify({type:"ACK",action:data.action}));
-            console.log("sent control:",data.action)
+    if (stats.size > position) {
+      const fd = await fs.promises.open(filePath, "r");
+      const { bytesRead, buffer: chunk } = await fd.read({
+        buffer: Buffer.alloc(stats.size - position),
+        position,
+      });
+      await fd.close();
+
+      position += bytesRead;
+      buffer += chunk.toString("utf8");
+
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || ""; // keep partial line
+
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        try {
+          onLine(JSON.parse(line));
+        } catch {
+          console.error("Failed to parse line:", line);
         }
       }
-    }catch(e){
-      console.error("invalid message",msg.toString(),e.message);
     }
-  })
-  ws.on("close", () => {
-    console.log("Client disconnected");
+  } catch (err) {
+    console.log("Waiting for log file...", err.message);
+  }
+}
+
+
+function tailFile(filePath, onLine,interval=500) {
+  setInterval(()=>readNewLines(filePath,onLine),interval);
+}
+
+async function handleControlMessage(ws,data,dotnetProcess,logFilePath){
+   if (!dotnetProcess.stdin.writable) {
+    console.error(".NET process stdin not writable");
+    ws.send(JSON.stringify({
+      type: "ERROR",
+      action: data.action,
+      message: "Process stdin not writable"
+    }));
+    return;
+  }
+  switch (data.action) {
+    case "CLEAR_LOGS":
+      dotnetProcess.stdin.write("STOP\n");
+      console.log("sent control:", "STOP");
+      setTimeout(async () => {
+        try {
+          await fs.promises.truncate(logFilePath, 0);
+          console.log("Logs cleared");
+          resetTailPosition();
+          ws.send(JSON.stringify({ type: "ACK", action: "CLEAR_LOGS" }));
+          setTimeout(() => {
+            dotnetProcess.stdin.write("START\n");
+            ws.send(JSON.stringify({ type: "ACK", action: "START" }));
+            console.log("sent control:", "START");
+          }, 200);
+        } catch (err) {
+          console.error("Failed to clear logs:", err);
+          ws.send(JSON.stringify({
+            type: "ERROR",
+            action: "CLEAR_LOGS",
+            message: err.message
+          }));
+        }
+      }, 100);
+      break;
+
+    default:
+      dotnetProcess.stdin.write(data.action + "\n");
+      ws.send(JSON.stringify({ type: "ACK", action: data.action }));
+      console.log("sent control:", data.action);
+  }
+}
+
+function setupWebSocketServer(wss,logFilePath,dotnetProcess){
+   wss.on("connection", (ws) => {
+    console.log("Client connected");
+    activeClient = ws;
+    ws.send(JSON.stringify(historyBuffer));
+    tailFile(logFilePath, (jsonLine) => {
+      addToHistory(jsonLine);
+      const anomalies = detectAnomalies(jsonLine);
+      if(anomalies.length){
+        console.log(anomalies);
+      }
+      // if(anomalies.length && activeClient?.readyState === ws.OPEN){
+      //   for(const anomaly of anomalies){
+      //   activeClient.send(JSON.stringify(anomaly));
+      //   }
+      // }
+      if (activeClient?.readyState === ws.OPEN) {
+        activeClient.send(JSON.stringify(jsonLine));
+      }
+    });
+    ws.on("message", (msg) => {
+      try {
+        const data = JSON.parse(msg.toString().trim());
+        if (data.type === "CONTROL") {
+          handleControlMessage(ws, data, dotnetProcess, logFilePath);
+        }
+      } catch (err) {
+        console.error("Invalid message:", msg.toString(), err.message);
+      }
+    });
+    ws.on("close", () => {
+      console.log("Client disconnected");
+      activeClient = null;
+    });
   });
-});
+}
 
 // graceful shutdown handler to dotnet process
 function shutdown(){
@@ -326,9 +350,9 @@ function shutdown(){
 }
 process.on("SIGINT",shutdown);
 process.on("SIGTERM",shutdown);
-process.on("exit",shutdown);
 
 const PORT =5000;
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
+  setupWebSocketServer(wss,logFilePath,dotnetProcess);
 });
