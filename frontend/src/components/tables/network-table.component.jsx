@@ -1,5 +1,5 @@
-import { Table,TableBody,TableCell,TableHead,TableHeader,TableRow } from "./ui/table";
-import { useLogsContext } from "../contexts/logs-context.context";
+import { Table,TableBody,TableCell,TableHead,TableHeader,TableRow } from "../ui/table";
+import { useLogsContext } from "../../contexts/logs-context.context";
 /**
  * {"Timestamp":"2025-10-07T11:06:45.0390734+05:30","EventType":"NetworkConnect","ProcessName":"helper","Pid":2692,"FilePath":null,"Extra":{"Operation":"Connect","Protocol":"TCP","LocalAddress":"10.2.25.106","LocalPort":52064,"RemoteAddress":"54.84.250.105","RemotePort":443}}
 {"Timestamp":"2025-10-07T11:06:45.7608458+05:30","EventType":"NetworkDisconnect","ProcessName":"helper","Pid":2692,"FilePath":null,"Extra":{"Operation":"Disconnect","Protocol":"TCP","LocalAddress":"10.2.25.106","LocalPort":52064,"RemoteAddress":"54.84.250.105","RemotePort":443}}

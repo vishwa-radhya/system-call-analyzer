@@ -38,9 +38,29 @@ export const LogsProvider =({children})=>{
     const [networkFilterType,setNetworkFilterType]=useState("All Logs");
     const [networkSearchQuery,setNetworkSearchQuery]=useState("");
     
-    // websocket in a ref to use across components
+    // anomaly data
+    const [anomalyData,setAnomalyData]=useState([]);
+    const [anomalyFilterType,setAnomalyFilterType] = useState("All Logs");
+    const [anomalySearchQuery,setAnomalySearchQuery]=useState("");
+
+    // websocket in a ref to use across 
     const wsRef = useRef(null);
     // filtering logic
+    const filteredAnomalies = useMemo(()=>{
+      let result = anomalyData;
+      if(anomalyFilterType==="low"){
+        result = result.filter((log)=>log.Severity==="low")
+      }else if(anomalyFilterType==="medium"){
+        result=result.filter((log)=>log.Severity==="medium")
+      }else if(anomalyFilterType==="high"){
+        result = result.filter((log)=>log.Severity==="high")
+      }
+      if(anomalyFilterType.trim() !== ""){
+        result = result.filter((log)=>log?.Rule?.toLowerCase().includes(anomalySearchQuery.toLowerCase()))
+      }
+      return result;
+    },[anomalyData,anomalyFilterType,anomalySearchQuery])
+
     const filteredProcessLogs = useMemo(()=>{
       let result = processLogs;
         if(processFilterType==="Process Start"){
@@ -92,13 +112,13 @@ export const LogsProvider =({children})=>{
     wsRef.current=ws;
     ws.onmessage = (event) => {
       try {
-        const data = JSON.parse(event.data);
-        if(data.type === "ERROR"){
-          toast.error(`Action ${data.action} failed: ${data.message}`);
+        const logData = JSON.parse(event.data);
+        if(logData.type === "ERROR"){
+          toast.error(`Action ${logData.action} failed: ${logData.message}`);
           return;
         }
-        if (data.type === "ACK") {
-            if(data.action==="CLEAR_LOGS"){
+        if (logData.type === "ACK") {
+            if(logData.action==="CLEAR_LOGS"){
               setProcessLogs([]);
               setEventCounts({});
               setActivePids(new Set());
@@ -106,16 +126,17 @@ export const LogsProvider =({children})=>{
               setNetworkLogs([]);
               toast.success("Logs cleared successfully!");
             }else{
-              if(data.action==="STOP"){
+              if(logData.action==="STOP"){
                 handleSetIsPaused(true)
-              }else if(data.action === "START"){
+              }else if(logData.action === "START"){
                 handleSetIsPaused(false)
               }
-              toast.success(`Action "${data.action}" executed successfully!`);
+              toast.success(`Action "${logData.action}" executed successfully!`);
             }
             return;
           }
-        const handleLog = (log) => {
+        const handleLog = (log,type) => {
+          if(type === "log"){
           if(log.EventType==="ProcessStart" || log.EventType==="ProcessStop"){
             setProcessLogs((prev)=>[log,...prev]);
             if (log.EventType === "ProcessStart") {
@@ -143,12 +164,15 @@ export const LogsProvider =({children})=>{
             ...prev,
             [log.EventType] : (prev[log.EventType] || 0) + 1
           }))
+        }else if(type === "anomaly"){
+          setAnomalyData((prev)=>[log,...prev]);
+        }
         };
 
-        if (Array.isArray(data)) {
-          data.reverse().forEach(handleLog);
+        if (Array.isArray(logData)) {
+          logData.reverse().forEach(item=>handleLog(item.data,item.type));
         } else {
-          handleLog(data);
+          handleLog(logData.data,logData.type);
         }
       } catch (err) {
         console.error("invalid ws message:", event.data, err);
@@ -186,6 +210,12 @@ export const LogsProvider =({children})=>{
   const handleSetNetworkSearchQuery=(val)=>{
     setNetworkSearchQuery(val);
   }
+  const handleSetAnomalyFilterType=(val)=>{
+    setAnomalyFilterType(val);
+  } 
+  const handleSetAnomalySearchQuery=(val)=>{
+    setAnomalySearchQuery(val);
+  }
   const handleSetIsPaused=(bool)=>setIsPaused(bool)
    const formatTime = (timestamp) => {
         return new Date(timestamp).toLocaleTimeString('en-US', { 
@@ -214,6 +244,11 @@ export const LogsProvider =({children})=>{
           handleSetNetworkFilterType,
           networkSearchQuery,
           handleSetNetworkSearchQuery,
+          filteredAnomalies,
+          anomalyFilterType,
+          handleSetAnomalyFilterType,
+          anomalySearchQuery,
+          handleSetAnomalySearchQuery,
           sendControlCommand,
           formatTime,
           handleSetIsPaused,
