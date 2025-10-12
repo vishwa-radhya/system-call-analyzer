@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useRef } from 'react';
+import { useMemo, useState, useEffect, useRef } from "react";
 import {
   BarChart,
   Bar,
@@ -7,174 +7,189 @@ import {
   Tooltip,
   CartesianGrid,
   ResponsiveContainer,
-  Cell, 
-} from 'recharts';
-import EmptyVisualization from './empty-visualization.component';
-
-// Mock data derived from the logs you provided:
-// dllhost (5 events), explorer (3 events), RuntimeBroker (1 event), helper (1 event)
-const mockTopProcessesData = [
-  { name: 'dllhost', count: 5, fill: '#16a34a' },         // Normal green
-  { name: 'explorer', count: 3, fill: '#0ea5e9' },        // Bright blue
-  { name: 'RuntimeBroker', count: 1, fill: '#f97316' },   // Bright orange
-  { name: 'helper', count: 1, fill: '#a855f7' }           // Bright purple
-];
+  Cell,
+} from "recharts";
+import EmptyVisualization from "./empty-visualization.component";
+const COLORS = ["#3b82f6", "#8b5cf6", "#06b6d4", "#10b981", "#f59e0b", "#ef4444"];
 
 const CustomTooltip = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
-      const item = payload[0];
-      return (
-        <div className="p-3 bg-white border border-gray-200 rounded-lg shadow-xl">
-          <p className="font-semibold text-lg text-gray-800">{label}</p>
-          <p className="text-sm" style={{ color: item.payload.fill }}>
-            Total Events: <span className="font-bold">{item.value.toLocaleString()}</span>
-          </p>
-        </div>
-      );
-    }
-    return null;
+  if (active && payload && payload.length) {
+    const item = payload[0];
+    return (
+      <div className="px-3 py-2 bg-white border border-gray-200 rounded shadow-lg">
+        <p className="font-medium text-sm text-gray-900">{label}</p>
+        <p className="text-sm text-gray-600 mt-1">
+          Events: <span className="font-semibold text-gray-900">{item.value.toLocaleString()}</span>
+        </p>
+      </div>
+    );
+  }
+  return null;
 };
 
-export default function TopProcessesBarChart({ data = mockTopProcessesData, title = "Top Processes by Event Count (Mock Data)" }) {
-    const [isVisible, setIsVisible] = useState(false);
-    const [hasAnimated, setHasAnimated] = useState(false);
-    const chartRef = useRef(null);
+export default function TopProcessesBarChart({
+  processLogs,
+  fileIOLogs,
+  networkLogs,
+  topN = 5,
+}) {
+  const [isVisible, setIsVisible] = useState(true);
+  const [hasAnimated, setHasAnimated] = useState(false);
+  const chartRef = useRef(null);
 
-    useEffect(() => {
-        const observer = new IntersectionObserver(
-            ([entry]) => {
-                if (entry.isIntersecting && !hasAnimated) {
-                    setIsVisible(true);
-                    setHasAnimated(true);
-                }
-            },
-            { threshold: 0.3 }
-        );
-
-        if (chartRef.current) {
-            observer.observe(chartRef.current);
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !hasAnimated) {
+          setIsVisible(true);
+          setHasAnimated(true);
         }
+      },
+      { threshold: 0.3 }
+    );
 
-        return () => {
-            if (chartRef.current) {
-                observer.unobserve(chartRef.current);
-            }
-        };
-    }, [hasAnimated]);
-  
-  const hasAny = data.some(d => d.count > 0);
+    if (chartRef.current) {
+      observer.observe(chartRef.current);
+    }
+
+    return () => {
+      if (chartRef.current) {
+        observer.unobserve(chartRef.current);
+      }
+    };
+  }, [hasAnimated]);
+
+  // Aggregate logs by process name
+  const data = useMemo(() => {
+    const processMap = new Map();
+
+    const addLog = (log) => {
+      const name = log.ProcessName || "Unknown";
+      processMap.set(name, (processMap.get(name) || 0) + 1);
+    };
+
+    [...processLogs, ...fileIOLogs, ...networkLogs].forEach(addLog);
+
+    // Convert to array and sort
+    return Array.from(processMap.entries())
+      .map(([name, count], idx) => ({
+        name,
+        count,
+        fill: COLORS[idx % COLORS.length],
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, topN);
+  }, [processLogs, fileIOLogs, networkLogs, topN]);
+
+  const hasAny = data.some((d) => d.count > 0);
   if (!hasAny) return <EmptyVisualization />;
 
   const totalEvents = data.reduce((sum, entry) => sum + entry.count, 0);
 
   return (
-    <div 
-        ref={chartRef}
-        className={`p-6 bg-gradient-to-br from-white to-green-50 border border-green-200 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-1000 transform ${
-            isVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
-        }`}
+    <div
+      ref={chartRef}
+      className={`p-6 bg-white border border-gray-200 rounded-lg shadow-sm transition-all duration-700 ${
+        isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+      }`}
     >
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-green-100 rounded-xl">
-            <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
-            </svg>
-          </div>
-          <div>
-            <h3 className="text-2xl font-bold text-gray-800">
-              {title}
-            </h3>
-            <p className="text-sm text-gray-600">Most active system processes</p>
-          </div>
+      <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900">
+            Top Processes by Activity
+          </h3>
+          <p className="text-sm text-gray-500 mt-1">Most active system processes</p>
         </div>
-        <div className="px-4 py-2 bg-green-100 text-green-700 rounded-full text-sm font-medium">
-          {totalEvents} total events
+        <div className="text-right">
+          <div className="text-2xl font-semibold text-gray-900">
+            {totalEvents.toLocaleString()}
+          </div>
+          <div className="text-xs text-gray-500 uppercase tracking-wide">Total Events</div>
         </div>
       </div>
-      
-      <div style={{ width: "100%", height: 400 }}>
-        <ResponsiveContainer width="100%" height="90%">
-          <BarChart 
-            data={data} 
-            margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
-            layout="vertical" 
+
+      <div style={{ width: "100%", height: 320 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={data}
+            margin={{ top: 10, right: 20, left: 20, bottom: 10 }}
+            layout="vertical"
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" strokeOpacity={0.6} />
-            
-            <XAxis 
-              type="number" 
-              allowDecimals={false}
-              tick={{ fontSize: 13, fill: '#6b7280', fontWeight: '500' }}
-              axisLine={{ stroke: '#e5e7eb' }}
-              tickLine={{ stroke: '#e5e7eb' }}
-              label={{
-                value: "Total Event Count",
-                position: "bottom",
-                offset: 10,
-                fill: '#374151',
-                style: { fontWeight: 'bold', fontSize: '14px' }
-              }}
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke="#e5e7eb"
+              horizontal={true}
+              vertical={false}
             />
-            
+
+            <XAxis
+              type="number"
+              allowDecimals={false}
+              tick={{ fontSize: 12, fill: "#6b7280" }}
+              axisLine={{ stroke: "#d1d5db" }}
+              tickLine={false}
+            />
+
             <YAxis
               dataKey="name"
               type="category"
-              tick={{ fontSize: 14, fill: '#374151', fontWeight: '500' }}
-              width={150}
-              axisLine={{ stroke: '#e5e7eb' }}
-              tickLine={{ stroke: '#e5e7eb' }}
+              tick={{ fontSize: 13, fill: "#374151" }}
+              width={140}
+              axisLine={false}
+              tickLine={false}
             />
 
-            <Tooltip 
+            <Tooltip
               content={<CustomTooltip />}
-              cursor={{ fill: 'rgba(243, 244, 246, 0.8)' }} 
+              cursor={{ fill: "rgba(243, 244, 246, 0.5)" }}
             />
 
-            <Bar 
-              dataKey="count" 
-              name="Event Count" 
-              radius={[0, 8, 8, 0]} // More rounded corners
+            <Bar
+              dataKey="count"
+              name="Event Count"
+              radius={[0, 4, 4, 0]}
               minPointSize={5}
               isAnimationActive={isVisible}
               animationBegin={isVisible ? 0 : 1000}
-              animationDuration={isVisible ? 1200 : 0}
+              animationDuration={isVisible ? 1000 : 0}
               animationEasing="ease-out"
             >
-              {
-                data.map((entry, index) => (
-                  <Cell 
-                    key={`cell-${index}`} 
-                    fill={entry.fill} 
-                    className="transition-all duration-500 hover:brightness-110 hover:shadow-lg hover:scale-105"
-                    stroke="#fff"
-                    strokeWidth={2}
-                    style={{
-                      filter: 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1))',
-                      transition: 'all 0.3s ease'
-                    }}
-                  />
-                ))
-              }
+              {data.map((entry, index) => (
+                <Cell
+                  key={`cell-${index}`}
+                  fill={entry.fill}
+                />
+              ))}
             </Bar>
           </BarChart>
         </ResponsiveContainer>
       </div>
-      
-      <div className="mt-4 grid grid-cols-2 gap-4">
-        {data.slice(0, 4).map((entry, index) => {
-          const percentage = ((entry.count / totalEvents) * 100).toFixed(1);
+
+      <div className="mt-6 pt-4 border-t border-gray-100 grid grid-cols-2 gap-4">
+        {data.map((entry, index) => {
+          const percentage =
+            totalEvents > 0
+              ? ((entry.count / totalEvents) * 100).toFixed(1)
+              : 0;
           return (
-            <div key={index} className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 hover:scale-105 hover:-translate-y-1">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-4 h-4 rounded-full animate-pulse" style={{ backgroundColor: entry.fill }}></div>
-                <span className="text-sm font-medium text-gray-700">{entry.name}</span>
-              </div>
-              <div className="text-2xl font-bold animate-pulse" style={{ color: entry.fill }}>
-                {entry.count} events
-              </div>
-              <div className="text-xs text-gray-500">
-                {percentage}% of total
+            <div
+              key={index}
+              className="flex items-start gap-3"
+            >
+              <div
+                className="w-3 h-3 rounded-sm mt-1 flex-shrink-0"
+                style={{ backgroundColor: entry.fill }}
+              ></div>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs text-gray-500 mb-1 truncate" title={entry.name}>
+                  {entry.name}
+                </div>
+                <div className="text-lg font-semibold text-gray-900">
+                  {entry.count.toLocaleString()}
+                </div>
+                <div className="text-xs text-gray-400">
+                  {percentage}%
+                </div>
               </div>
             </div>
           );

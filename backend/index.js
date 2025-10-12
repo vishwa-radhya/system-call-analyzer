@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { WebSocketServer } from "ws";
+import { WebSocketServer,WebSocket } from "ws";
 import { fileURLToPath } from "url";
 import { Worker } from "worker_threads";
 import { spawn } from "child_process";
@@ -189,10 +189,9 @@ const anomalyWorker = new Worker(path.resolve('./anomaly-worker.js'));
 console.log("WebSocket server running on ws://localhost:8080");
 
 anomalyWorker.on('message',(msg)=>{
-  if(msg.anomalies && activeClient?.readyState === activeClient.OPEN){
+  if(msg.anomalies && activeClient?.readyState === WebSocket.OPEN){
     for(const anomaly of msg.anomalies){
       activeClient.send(JSON.stringify({type:"anomaly",data:anomaly}));
-      // console.log('anomaly',anomaly)
     }
   }
 })
@@ -310,11 +309,14 @@ function setupWebSocketServer(wss,logFilePath,dotnetProcess){
    wss.on("connection", (ws) => {
     console.log("Client connected");
     activeClient = ws;
-    ws.send(JSON.stringify(historyBuffer));
+    ws.send(JSON.stringify({
+      type:"history",
+      data:historyBuffer
+    }));
     tailFile(logFilePath, (jsonLine) => {
       addToHistory(jsonLine);
       if (activeClient?.readyState === ws.OPEN) {
-        // activeClient.send(JSON.stringify({type:"log",data:jsonLine}));
+        activeClient.send(JSON.stringify({type:"log",data:jsonLine}));
       }
       anomalyWorker.postMessage(jsonLine);
     });

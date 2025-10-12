@@ -8,33 +8,18 @@ export const LogsProvider =({children})=>{
     const [eventCounts,setEventCounts]=useState({});
 
     // process Data
-    const [processLogs,setProcessLogs]=useState([
-     {"Timestamp":"2025-10-08T12:41:05.887Z","EventType":"ProcessStop","ProcessName":"RuntimeBroker","Pid":12188,"FilePath":null,"Extra":null},
-{"Timestamp":"2025-10-08T12:41:05.887Z","EventType":"ProcessStop","ProcessName":"dllhost","Pid":18036,"FilePath":null,"Extra":null},
-{"Timestamp":"2025-10-08T12:41:05.887Z","EventType":"ProcessStop","ProcessName":"dllhost","Pid":18036,"FilePath":null,"Extra":null},
-{"Timestamp":"2025-10-08T12:41:05.887Z","EventType":"ProcessStop","ProcessName":"dllhost","Pid":18036,"FilePath":null,"Extra":null},
-{"Timestamp":"2025-10-08T12:41:05.887Z","EventType":"ProcessStop","ProcessName":"dllhost","Pid":18036,"FilePath":null,"Extra":null},
-{"Timestamp":"2025-10-08T12:41:05.887Z","EventType":"ProcessStop","ProcessName":"dllhost","Pid":18036,"FilePath":null,"Extra":null},
-    ]);
+    const [processLogs,setProcessLogs]=useState([]);
     const [processFilterType,setProcessFilterType]=useState("All Logs");
     const [processSearchQuery,setProcessSearchQuery]=useState("");
     const [activePids, setActivePids] = useState(new Set());
 
     //FileIO data
-    const [fileIOLogs,setFileIOLogs]=useState([
-      {"Timestamp":"2025-10-08T12:41:05.887Z","EventType":"FileRename","ProcessName":"explorer","Pid":21976,"FilePath":"C:\\Users\\vishu\\testWatch\\ff.txt","Extra":null},
-      {"Timestamp":"2025-10-08T12:41:05.887Z","EventType":"FileRename","ProcessName":"explorer","Pid":21976,"FilePath":"C:\\Users\\vishu\\testWatch\\ff.txt","Extra":null},
-      {"Timestamp":"2025-10-08T12:41:05.887Z","EventType":"FileRename","ProcessName":"explorer","Pid":21976,"FilePath":"C:\\Users\\vishu\\testWatch\\ff.txt","Extra":null},
-
-    ]);
+    const [fileIOLogs,setFileIOLogs]=useState([]);
     const [fileIOFilterType,setFileIOFilterType]=useState("All Logs");
     const [fileIOSearchQuery,setFileIOSearchQuery]=useState("");
 
     // Network data
-    const [networkLogs,setNetworkLogs]=useState([
-       {"Timestamp":"2025-10-08T12:41:05.887Z","EventType":"NetworkDisconnect","ProcessName":"helper","Pid":2692,"FilePath":null,"Extra":{"Operation":"Disconnect","Protocol":"TCP","LocalAddress":"10.2.25.106","LocalPort":14350,"RemoteAddress":"52.23.19.168","RemotePort":443}},
-
-    ]);
+    const [networkLogs,setNetworkLogs]=useState([]);
     const [networkFilterType,setNetworkFilterType]=useState("All Logs");
     const [networkSearchQuery,setNetworkSearchQuery]=useState("");
     
@@ -48,15 +33,15 @@ export const LogsProvider =({children})=>{
     // filtering logic
     const filteredAnomalies = useMemo(()=>{
       let result = anomalyData;
-      if(anomalyFilterType==="low"){
+      if(anomalyFilterType==="Low"){
         result = result.filter((log)=>log.Severity==="low")
-      }else if(anomalyFilterType==="medium"){
+      }else if(anomalyFilterType==="Medium"){
         result=result.filter((log)=>log.Severity==="medium")
-      }else if(anomalyFilterType==="high"){
+      }else if(anomalyFilterType==="High"){
         result = result.filter((log)=>log.Severity==="high")
       }
       if(anomalyFilterType.trim() !== ""){
-        result = result.filter((log)=>log?.Rule?.toLowerCase().includes(anomalySearchQuery.toLowerCase()))
+        result = result.filter((log)=>log?.Log?.ProcessName.toLowerCase().includes(anomalySearchQuery.toLowerCase()))
       }
       return result;
     },[anomalyData,anomalyFilterType,anomalySearchQuery])
@@ -136,7 +121,11 @@ export const LogsProvider =({children})=>{
             return;
           }
         const handleLog = (log,type) => {
-          if(type === "log"){
+          if(type === "anomaly"){
+          setAnomalyData((prev)=>[log,...prev]);
+          setEventCounts((prev)=>({...prev,[log.Severity] : (prev[log.Severity] || 0) + 1}))
+        }
+        else{
           if(log.EventType==="ProcessStart" || log.EventType==="ProcessStop"){
             setProcessLogs((prev)=>[log,...prev]);
             if (log.EventType === "ProcessStart") {
@@ -160,12 +149,7 @@ export const LogsProvider =({children})=>{
           if(log.EventType==="NetworkConnect" || log.EventType==="NetworkDisconnect"){
             setNetworkLogs((prev)=>[log,...prev]);
           }
-          setEventCounts((prev)=>({
-            ...prev,
-            [log.EventType] : (prev[log.EventType] || 0) + 1
-          }))
-        }else if(type === "anomaly"){
-          setAnomalyData((prev)=>[log,...prev]);
+          setEventCounts((prev)=>({...prev,[log.EventType] : (prev[log.EventType] || 0) + 1}))
         }
         };
 
@@ -216,6 +200,15 @@ export const LogsProvider =({children})=>{
   const handleSetAnomalySearchQuery=(val)=>{
     setAnomalySearchQuery(val);
   }
+  const handleClearAnomalyData=()=>{
+    setAnomalyData([]);
+    setEventCounts((prev)=>({
+      ...prev,
+      low : 0,
+      medium : 0,
+      high : 0
+    }))
+  }
   const handleSetIsPaused=(bool)=>setIsPaused(bool)
    const formatTime = (timestamp) => {
         return new Date(timestamp).toLocaleTimeString('en-US', { 
@@ -249,6 +242,7 @@ export const LogsProvider =({children})=>{
           handleSetAnomalyFilterType,
           anomalySearchQuery,
           handleSetAnomalySearchQuery,
+          handleClearAnomalyData,
           sendControlCommand,
           formatTime,
           handleSetIsPaused,

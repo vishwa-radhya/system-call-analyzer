@@ -56,7 +56,7 @@ const Home = () => {
                                 <AnamolyControlOptions/>
                                 <AnamolyEventInputSelect/>
                             </div>
-                            <div>
+                            <div className="p-2 h-[420px] overflow-y-auto">
                                 <AnomalyTable anomalyLogs={filteredAnomalies} />
                             </div>
                         </div>

@@ -25,10 +25,10 @@ const EventInfoCards = ({currentLogType,isAnamolyInfoCards=false}) => {
                 <InfoCard name='Network Disconnect' val={eventCounts?.NetworkDisconnect || 0} content={'Total number of network disconnects'} Icon={CloudOff} iconColor={'red'} />
             </Fragment>}
             {isAnamolyInfoCards && <Fragment>
-                <InfoCard name='Total Anomalies' val={filteredAnomalies?.length} content={'Total anomalies recorded by system'} Icon={ShieldOff} iconColor={'blue'} />
-                <InfoCard name='Low Severity' val={0} content={'Total events flagged as low threats'} Icon={SignalLow} iconColor={'green'} />
-                <InfoCard name='Medium Severity' val={0} content={'Total events flagged as medium threats'} Icon={SignalMedium} iconColor={'orange'} />
-                <InfoCard name='High Severity' val={0} content={'Total events flagged as high threats'} Icon={SignalHigh} iconColor={'red'} />
+                <InfoCard name='Total Anomalies' val={filteredAnomalies?.length || 0} content={'Total anomalies recorded by system'} Icon={ShieldOff} iconColor={'blue'} />
+                <InfoCard name='Low Severity' val={eventCounts?.low || 0} content={'Total events flagged as low threats'} Icon={SignalLow} iconColor={'green'} />
+                <InfoCard name='Medium Severity' val={eventCounts?.medium || 0} content={'Total events flagged as medium threats'} Icon={SignalMedium} iconColor={'orange'} />
+                <InfoCard name='High Severity' val={eventCounts?.high || 0} content={'Total events flagged as high threats'} Icon={SignalHigh} iconColor={'red'} />
             </Fragment>}
         </Fragment>
      );

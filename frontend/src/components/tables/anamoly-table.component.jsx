@@ -3,7 +3,6 @@ import { useLogsContext } from "../../contexts/logs-context.context";
 
 const AnomalyTable = ({ anomalyLogs=[], handleLogClick }) => {
   const { formatTime } = useLogsContext();
-  // console.log(anomalyLogs)
   return (
     <Table>
       <TableHeader className="sticky top-0 bg-gray-50 text-[15px]">
@@ -13,7 +12,8 @@ const AnomalyTable = ({ anomalyLogs=[], handleLogClick }) => {
           <TableHead className="px-3 py-2 text-left font-medium text-gray-600">Rule</TableHead>
           <TableHead className="px-3 py-2 text-left font-medium text-gray-600">Severity</TableHead>
           <TableHead className="px-3 py-2 text-left font-medium text-gray-600">Reason</TableHead>
-          <TableHead className="px-3 py-2 text-left font-medium text-gray-600">PID</TableHead>
+          <TableHead className="px-3 py-2 text-left font-medium text-gray-600">Event</TableHead>
+          <TableHead className="px-3 py-2 text-left font-medium text-gray-600">Process</TableHead>
         </TableRow>
       </TableHeader>
 
@@ -34,9 +34,9 @@ const AnomalyTable = ({ anomalyLogs=[], handleLogClick }) => {
 
             <TableCell
               className={`px-3 py-2 font-semibold ${
-                anom.Severity === "High"
+                anom.Severity === "high"
                   ? "text-red-600"
-                  : anom.Severity === "Medium"
+                  : anom.Severity === "medium"
                   ? "text-yellow-600"
                   : "text-green-600"
               }`}
@@ -54,10 +54,6 @@ const AnomalyTable = ({ anomalyLogs=[], handleLogClick }) => {
 
             <TableCell className="px-3 py-2 text-gray-900 break-all whitespace-pre-wrap">
               {anom.Log?.ProcessName || "—"}
-            </TableCell>
-
-            <TableCell className="px-3 py-2 text-gray-600 font-mono">
-              {anom.Log?.Pid || "—"}
             </TableCell>
           </TableRow>
         ))}

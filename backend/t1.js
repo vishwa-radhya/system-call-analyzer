@@ -353,3 +353,18 @@ const res=buildLogMap(data,targetLog)
 }]
 
  */
+
+/**
+ * 
+Anomaly: true
+Log: 
+  EventType: "NetworkConnect"
+  Extra: {Operation: 'Connect', Protocol: 'TCP', LocalAddress: '10.2.14.237', LocalPort: 17416, RemoteAddress: '3.208.241.123', …}
+  FilePath: null
+  Pid: 22264
+  ProcessName: "helper"
+  Timestamp: "2025-10-12T18:21:51.8802316+05:30"
+Reason: "External network connection detected: 3.208.241.123:443"
+Rule: "ExternalConnection"
+Severity: "medium"
+ */
