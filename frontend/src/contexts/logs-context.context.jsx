@@ -8,39 +8,44 @@ export const LogsProvider =({children})=>{
     const [eventCounts,setEventCounts]=useState({});
 
     // process Data
-    const [processLogs,setProcessLogs]=useState([
-      {"Timestamp":"2025-10-08T12:41:05.887Z","EventType":"ProcessStop","ProcessName":"RuntimeBroker","Pid":12188,"FilePath":null,"Extra":null},
-{"Timestamp":"2025-10-08T12:41:05.887Z","EventType":"ProcessStop","ProcessName":"dllhost","Pid":18036,"FilePath":null,"Extra":null},
-{"Timestamp":"2025-10-08T12:41:05.887Z","EventType":"ProcessStop","ProcessName":"dllhost","Pid":18036,"FilePath":null,"Extra":null},
-{"Timestamp":"2025-10-08T12:41:05.887Z","EventType":"ProcessStop","ProcessName":"dllhost","Pid":18036,"FilePath":null,"Extra":null},
-{"Timestamp":"2025-10-08T12:41:05.887Z","EventType":"ProcessStop","ProcessName":"dllhost","Pid":18036,"FilePath":null,"Extra":null},
-{"Timestamp":"2025-10-08T12:41:05.887Z","EventType":"ProcessStop","ProcessName":"dllhost","Pid":18036,"FilePath":null,"Extra":null},
-    ]);
+    const [processLogs,setProcessLogs]=useState([]);
     const [processFilterType,setProcessFilterType]=useState("All Logs");
     const [processSearchQuery,setProcessSearchQuery]=useState("");
     const [activePids, setActivePids] = useState(new Set());
 
     //FileIO data
-    const [fileIOLogs,setFileIOLogs]=useState([
-      {"Timestamp":"2025-10-08T12:41:05.887Z","EventType":"FileRename","ProcessName":"explorer","Pid":21976,"FilePath":"C:\\Users\\vishu\\testWatch\\ff.txt","Extra":null},
-      {"Timestamp":"2025-10-08T12:41:05.887Z","EventType":"FileRename","ProcessName":"explorer","Pid":21976,"FilePath":"C:\\Users\\vishu\\testWatch\\ff.txt","Extra":null},
-      {"Timestamp":"2025-10-08T12:41:05.887Z","EventType":"FileRename","ProcessName":"explorer","Pid":21976,"FilePath":"C:\\Users\\vishu\\testWatch\\ff.txt","Extra":null},
-
-    ]);
+    const [fileIOLogs,setFileIOLogs]=useState([]);
     const [fileIOFilterType,setFileIOFilterType]=useState("All Logs");
     const [fileIOSearchQuery,setFileIOSearchQuery]=useState("");
 
     // Network data
-    const [networkLogs,setNetworkLogs]=useState([
-       {"Timestamp":"2025-10-08T12:41:05.887Z","EventType":"NetworkDisconnect","ProcessName":"helper","Pid":2692,"FilePath":null,"Extra":{"Operation":"Disconnect","Protocol":"TCP","LocalAddress":"10.2.25.106","LocalPort":14350,"RemoteAddress":"52.23.19.168","RemotePort":443}},
-
-    ]);
+    const [networkLogs,setNetworkLogs]=useState([]);
     const [networkFilterType,setNetworkFilterType]=useState("All Logs");
     const [networkSearchQuery,setNetworkSearchQuery]=useState("");
     
-    // websocket in a ref to use across components
+    // anomaly data
+    const [anomalyData,setAnomalyData]=useState([]);
+    const [anomalyFilterType,setAnomalyFilterType] = useState("All Logs");
+    const [anomalySearchQuery,setAnomalySearchQuery]=useState("");
+
+    // websocket in a ref to use across 
     const wsRef = useRef(null);
     // filtering logic
+    const filteredAnomalies = useMemo(()=>{
+      let result = anomalyData;
+      if(anomalyFilterType==="Low"){
+        result = result.filter((log)=>log.Severity==="low")
+      }else if(anomalyFilterType==="Medium"){
+        result=result.filter((log)=>log.Severity==="medium")
+      }else if(anomalyFilterType==="High"){
+        result = result.filter((log)=>log.Severity==="high")
+      }
+      if(anomalyFilterType.trim() !== ""){
+        result = result.filter((log)=>log?.Log?.ProcessName.toLowerCase().includes(anomalySearchQuery.toLowerCase()))
+      }
+      return result;
+    },[anomalyData,anomalyFilterType,anomalySearchQuery])
+
     const filteredProcessLogs = useMemo(()=>{
       let result = processLogs;
         if(processFilterType==="Process Start"){
@@ -92,13 +97,13 @@ export const LogsProvider =({children})=>{
     wsRef.current=ws;
     ws.onmessage = (event) => {
       try {
-        const data = JSON.parse(event.data);
-        if(data.type === "ERROR"){
-          toast.error(`Action ${data.action} failed: ${data.message}`);
+        const logData = JSON.parse(event.data);
+        if(logData.type === "ERROR"){
+          toast.error(`Action ${logData.action} failed: ${logData.message}`);
           return;
         }
-        if (data.type === "ACK") {
-            if(data.action==="CLEAR_LOGS"){
+        if (logData.type === "ACK") {
+            if(logData.action==="CLEAR_LOGS"){
               setProcessLogs([]);
               setEventCounts({});
               setActivePids(new Set());
@@ -106,16 +111,21 @@ export const LogsProvider =({children})=>{
               setNetworkLogs([]);
               toast.success("Logs cleared successfully!");
             }else{
-              if(data.action==="STOP"){
+              if(logData.action==="STOP"){
                 handleSetIsPaused(true)
-              }else if(data.action === "START"){
+              }else if(logData.action === "START"){
                 handleSetIsPaused(false)
               }
-              toast.success(`Action "${data.action}" executed successfully!`);
+              toast.success(`Action "${logData.action}" executed successfully!`);
             }
             return;
           }
-        const handleLog = (log) => {
+        const handleLog = (log,type) => {
+          if(type === "anomaly"){
+          setAnomalyData((prev)=>[log,...prev]);
+          setEventCounts((prev)=>({...prev,[log.Severity] : (prev[log.Severity] || 0) + 1}))
+        }
+        else{
           if(log.EventType==="ProcessStart" || log.EventType==="ProcessStop"){
             setProcessLogs((prev)=>[log,...prev]);
             if (log.EventType === "ProcessStart") {
@@ -139,16 +149,14 @@ export const LogsProvider =({children})=>{
           if(log.EventType==="NetworkConnect" || log.EventType==="NetworkDisconnect"){
             setNetworkLogs((prev)=>[log,...prev]);
           }
-          setEventCounts((prev)=>({
-            ...prev,
-            [log.EventType] : (prev[log.EventType] || 0) + 1
-          }))
+          setEventCounts((prev)=>({...prev,[log.EventType] : (prev[log.EventType] || 0) + 1}))
+        }
         };
 
-        if (Array.isArray(data)) {
-          data.reverse().forEach(handleLog);
+        if (Array.isArray(logData)) {
+          logData.reverse().forEach(item=>handleLog(item.data,item.type));
         } else {
-          handleLog(data);
+          handleLog(logData.data,logData.type);
         }
       } catch (err) {
         console.error("invalid ws message:", event.data, err);
@@ -186,6 +194,21 @@ export const LogsProvider =({children})=>{
   const handleSetNetworkSearchQuery=(val)=>{
     setNetworkSearchQuery(val);
   }
+  const handleSetAnomalyFilterType=(val)=>{
+    setAnomalyFilterType(val);
+  } 
+  const handleSetAnomalySearchQuery=(val)=>{
+    setAnomalySearchQuery(val);
+  }
+  const handleClearAnomalyData=()=>{
+    setAnomalyData([]);
+    setEventCounts((prev)=>({
+      ...prev,
+      low : 0,
+      medium : 0,
+      high : 0
+    }))
+  }
   const handleSetIsPaused=(bool)=>setIsPaused(bool)
    const formatTime = (timestamp) => {
         return new Date(timestamp).toLocaleTimeString('en-US', { 
@@ -214,6 +237,12 @@ export const LogsProvider =({children})=>{
           handleSetNetworkFilterType,
           networkSearchQuery,
           handleSetNetworkSearchQuery,
+          filteredAnomalies,
+          anomalyFilterType,
+          handleSetAnomalyFilterType,
+          anomalySearchQuery,
+          handleSetAnomalySearchQuery,
+          handleClearAnomalyData,
           sendControlCommand,
           formatTime,
           handleSetIsPaused,

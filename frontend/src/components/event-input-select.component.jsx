@@ -9,7 +9,7 @@ const EventInputSelect = ({currentLogType}) => {
     return ( 
         <Fragment>
             {currentLogType === 0 && <Fragment>
-                <Input type="search" placeholder='Search logs...' value={processSearchQuery} onChange={(e)=>handleSetProcessSearchQuery(e.target.value)} className={'flex-grow w-auto'} />
+                <Input type="search" placeholder='Search logs by name...' value={processSearchQuery} onChange={(e)=>handleSetProcessSearchQuery(e.target.value)} className={'flex-grow w-auto'} />
                 <Select value={processFilterType} onValueChange={handleSetProcessFilterType} >
                     <SelectTrigger>
                         <SelectValue placeholder='Select type'></SelectValue>
@@ -22,7 +22,7 @@ const EventInputSelect = ({currentLogType}) => {
                 </Select>
             </Fragment>}
             {currentLogType === 1 && <Fragment>
-                <Input type="search" placeholder='Search FileIO...' value={fileIOSearchQuery} onChange={(e)=>handleSetFileIOSearchQuery(e.target.value)} className={'flex-grow w-auto'} />
+                <Input type="search" placeholder='Search FileIO by name...' value={fileIOSearchQuery} onChange={(e)=>handleSetFileIOSearchQuery(e.target.value)} className={'flex-grow w-auto'} />
                 <Select value={fileIOFilterType} onValueChange={handleSetFileIOFilterType} >
                     <SelectTrigger>
                         <SelectValue placeholder='Select type'></SelectValue>
@@ -37,7 +37,7 @@ const EventInputSelect = ({currentLogType}) => {
             </Fragment>}
             {
                 currentLogType===2 && <Fragment>
-                    <Input type="search" placeholder='Search Network...' value={networkSearchQuery} onChange={(e)=>handleSetNetworkSearchQuery(e.target.value)} className={'flex-grow w-auto'} />
+                    <Input type="search" placeholder='Search Network by name...' value={networkSearchQuery} onChange={(e)=>handleSetNetworkSearchQuery(e.target.value)} className={'flex-grow w-auto'} />
                      <Select value={networkFilterType} onValueChange={handleSetNetworkFilterType} >
                     <SelectTrigger>
                         <SelectValue placeholder='Select type'></SelectValue>

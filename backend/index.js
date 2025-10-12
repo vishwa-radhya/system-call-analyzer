@@ -1,7 +1,8 @@
 import fs from "fs";
 import path from "path";
-import { WebSocketServer } from "ws";
+import { WebSocketServer,WebSocket } from "ws";
 import { fileURLToPath } from "url";
+import { Worker } from "worker_threads";
 import { spawn } from "child_process";
 import express from 'express';
 import { GoogleGenAI } from "@google/genai";
@@ -10,7 +11,6 @@ import cors from 'cors';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config()
-import { detectAnomalies } from "./anomaly-detector.js";
 
 const app = express();
 app.use(express.json());
@@ -24,6 +24,13 @@ app.use(
 const googleAi = new GoogleGenAI({apiKey:process.env.GOOGLE_GEMINI_API_KEY});
 // cache file
 const cacheFile = path.resolve(__dirname,"../logs/ai_explanations.json");
+
+const historyBuffer = [];
+const MAX_HISTORY=100;
+let position = 0;
+let buffer = "";
+let activeClient=null;
+
 let explanationCache={}
 if(fs.existsSync(cacheFile)){
   try{
@@ -178,7 +185,16 @@ app.get("/process-tree",async(req,res)=>{
 
 const logFilePath = path.resolve(__dirname, "../logs/SysWatch.jsonl");
 const wss = new WebSocketServer({port:8080});
+const anomalyWorker = new Worker(path.resolve('./anomaly-worker.js'));
 console.log("WebSocket server running on ws://localhost:8080");
+
+anomalyWorker.on('message',(msg)=>{
+  if(msg.anomalies && activeClient?.readyState === WebSocket.OPEN){
+    for(const anomaly of msg.anomalies){
+      activeClient.send(JSON.stringify({type:"anomaly",data:anomaly}));
+    }
+  }
+})
 
 const dotnetProcess=spawn("dotnet",["run"],{
   cwd:path.resolve(__dirname,"../SysWatchETW"),
@@ -196,12 +212,6 @@ dotnetProcess.stderr.on("data", (data) => {
 dotnetProcess.on("exit", (code) => {
   console.log(`[SysWatch] exited with code ${code}`);
 });
-
-const historyBuffer = [];
-const MAX_HISTORY=100;
-let position = 0;
-let buffer = "";
-let activeClient=null;
 
 function addToHistory(log){
   historyBuffer.push(log);
@@ -299,21 +309,16 @@ function setupWebSocketServer(wss,logFilePath,dotnetProcess){
    wss.on("connection", (ws) => {
     console.log("Client connected");
     activeClient = ws;
-    ws.send(JSON.stringify(historyBuffer));
+    ws.send(JSON.stringify({
+      type:"history",
+      data:historyBuffer
+    }));
     tailFile(logFilePath, (jsonLine) => {
       addToHistory(jsonLine);
-      const anomalies = detectAnomalies(jsonLine);
-      if(anomalies.length){
-        console.log(anomalies);
-      }
-      // if(anomalies.length && activeClient?.readyState === ws.OPEN){
-      //   for(const anomaly of anomalies){
-      //   activeClient.send(JSON.stringify(anomaly));
-      //   }
-      // }
       if (activeClient?.readyState === ws.OPEN) {
-        activeClient.send(JSON.stringify(jsonLine));
+        activeClient.send(JSON.stringify({type:"log",data:jsonLine}));
       }
+      anomalyWorker.postMessage(jsonLine);
     });
     ws.on("message", (msg) => {
       try {
@@ -332,7 +337,7 @@ function setupWebSocketServer(wss,logFilePath,dotnetProcess){
   });
 }
 
-// graceful shutdown handler to dotnet process
+// shutdown handler to dotnet process
 function shutdown(){
   console.log("Shutting down backend..");
   if(dotnetProcess && dotnetProcess.stdin.writable){
