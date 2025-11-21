@@ -137,10 +137,8 @@ app.get("/process-tree",async(req,res)=>{
       const getChildren = (pid) => {
           const children = [];
           for (const log of data) {
-              // Check if the current log is a child of the target pid
-              if (log.Extra?.ParentPid === pid) {
-                  // Ensure the child's start event is within the parent's start and stop
-                  const parentNode = logMap.get(pid);
+              if (log.Extra?.ParentPid === pid) { // Check if the current log is a child of the target pid
+                  const parentNode = logMap.get(pid); // Ensure the child's start event is within the parent's start and stop
                   const parentStart = parentNode.start?.Timestamp;
                   const parentStop = parentNode.stop?.Timestamp;
 
@@ -156,16 +154,13 @@ app.get("/process-tree",async(req,res)=>{
           if (!targetLog) return null;
           const pid = targetLog.Pid;
           const node = logMap.get(pid);
-          // Find children within the parent's timeline
-          const children = getChildren(pid);
-          // Recursively build children nodes
-          for (const child of children) {
+          const children = getChildren(pid);  // Find children within the parent's timeline
+          for (const child of children) { // Recursively build children nodes
               const childNode = buildTree(child);
               if (childNode) {
                   node.children.push(childNode);
               }
           }
-          
           return node;
       }
       const finalNode= buildTree(targetLog);
@@ -185,7 +180,7 @@ app.get("/process-tree",async(req,res)=>{
 
 const logFilePath = path.resolve(__dirname, "../logs/SysWatch.jsonl");
 const wss = new WebSocketServer({port:8080});
-const anomalyWorker = new Worker(path.resolve('./anomaly-worker.js'));
+const anomalyWorker = new Worker(path.resolve('./anomaly/anomaly-worker.js'));
 console.log("WebSocket server running on ws://localhost:8080");
 
 anomalyWorker.on('message',(msg)=>{

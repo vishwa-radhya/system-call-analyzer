@@ -8,8 +8,7 @@ class Program
     static StreamWriter? logStream;
     static void Main(string[] args)
     {
-        //ensuring stdout uses UTF-8 and flushes immediately
-        Console.OutputEncoding = System.Text.Encoding.UTF8;
+        Console.OutputEncoding = System.Text.Encoding.UTF8; //ensuring stdout uses UTF-8 and flushes immediately
         Console.WriteLine("[SysWatch] Initialized");
         Console.Out.Flush();
         //admin check
