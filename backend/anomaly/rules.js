@@ -1,70 +1,130 @@
-const suspiciousProcesses = ["powershell", "cmd", "wscript", "cscript"];
-
 export const rulesByType = {
   process: [
     {
-      name: "SuspiciousProcess",
+      name: "EncodedPowerShell",
       severity: "high",
-      check: log =>
-        log.EventType?.startsWith("Process") &&
-        suspiciousProcesses.includes(log.ProcessName?.toLowerCase()),
-      reason: log => `Suspicious process started: ${log.ProcessName}`
+      mitre: "T1059.001", // powershell
+      conditions: {
+        all: [
+          { field: "ProcessName", operator: "equals", expected: "powershell" },
+          { field: "Extra.ImageFileName", operator: "regex", expected: "powershell\\.exe" },
+          { field: "CommandLine", operator: "regex", expected: "encodedcommand|enc\\s" }
+        ]
+      },
+      reason: log => `Encoded PowerShell command detected: ${log.CommandLine}`
     },
+
     {
-      name: "UnexpectedParent",
+      name: "LOLbinsExecution",
       severity: "medium",
+      mitre: "T1218",
+      conditions: {
+        any: [
+          { field: "ProcessName", operator: "in", expected: ["mshta", "rundll32", "regsvr32", "wscript", "cscript"] },
+          { field: "Extra.ImageFileName", operator: "regex", expected: "mshta|rundll32|regsvr32|wscript|cscript" }
+        ]
+      },
+      reason: log => `Execution via LOLBin: ${log.ProcessName}`
+    },
+
+    {
+      name: "SuspiciousParentPID",
+      severity: "medium",
+      mitre: "T1055",
+      conditions: {
+        all: [
+          { field: "EventType", operator: "equals", expected: "ProcessStart" },
+          { field: "Extra.ParentPid", operator: "equals", expected: 4 } // PID 4 = SYSTEM
+        ]
+      },
+      reason: log => `Process ${log.ProcessName} started by SYSTEM (PID 4)`
+    },
+
+    {
+      name: "RapidSpawn",
+      severity: "low",
+      mitre: "T1106",
       check: log =>
         log.EventType === "ProcessStart" &&
-        log.Extra?.ParentPid === 4,
-      reason: log =>
-        `Process ${log.ProcessName} started with suspicious parent PID: ${log.Extra.ParentPid}`
+        ["cmd", "powershell", "wscript"].includes(log.ProcessName?.toLowerCase()),
+      reason: log => `Rapid process spawning detected: ${log.ProcessName}`
     }
   ],
 
   file: [
     {
-      name: "SensitiveDirAccess",
-      severity: "medium",
-      check: log =>
-        log.EventType?.startsWith("File") &&
-        /\\windows\\(system32|temp)/i.test(log.FilePath || ""),
-      reason: log => `File access in sensitive directory: ${log.FilePath}`
+      name: "WriteToSystem32",
+      severity: "high",
+      mitre: "T1068",
+      conditions: {
+        all: [
+          { field: "EventType", operator: "equals", expected: "FileWrite" },
+          { field: "FilePath", operator: "regex", expected: "windows\\\\system32" }
+        ]
+      },
+      reason: log => `Write attempt in System32 directory: ${log.FilePath}`
     },
+
     {
-      name: "SuspiciousFileType",
+      name: "ExecutableDroppedInTemp",
       severity: "medium",
-      check: log =>
-        log.EventType?.startsWith("File") &&
-        /\.(exe|dll|bat)$/i.test(log.FilePath || ""),
-      reason: log => `Suspicious file type accessed: ${log.FilePath}`
+      mitre: "T1059",
+      conditions: {
+        all: [
+          { field: "FilePath", operator: "regex", expected: "temp" },
+          { field: "FilePath", operator: "regex", expected: "\\.(exe|dll|bat|vbs)$" }
+        ]
+      },
+      reason: log => `Suspicious executable dropped in Temp directory: ${log.FilePath}`
+    },
+
+    {
+      name: "ScriptFileAccess",
+      severity: "low",
+      mitre: "T1059",
+      conditions: {
+        all: [
+          { field: "FilePath", operator: "regex", expected: "\\.(ps1|vbs|js|bat)$" }
+        ]
+      },
+      reason: log => `Script file accessed: ${log.FilePath}`
     }
   ],
 
   network: [
     {
-      name: "ExternalConnection",
+      name: "ExternalIPConnection",
       severity: "medium",
-      check: log => {
-        if (!log.EventType?.startsWith("Network")) return false;
-        const addr = log.Extra?.RemoteAddress;
-        return (
-          addr &&
-          !addr.startsWith("192.168.") &&
-          !addr.startsWith("10.") &&
-          !addr.startsWith("127.")
-        );
+      mitre: "T1105",
+      conditions: {
+        all: [
+          { field: "Extra.RemoteAddress", operator: "regex", expected: "^(?!127\\.0\\.0\\.1|10\\.|172\\.16\\.|192\\.168\\.).*" }
+        ]
       },
       reason: log =>
-        `External network connection detected: ${log.Extra?.RemoteAddress}:${log.Extra?.RemotePort}`
+        `External connection detected: ${log.Extra?.RemoteAddress}:${log.Extra?.RemotePort}`
     },
+
     {
       name: "UncommonPort",
       severity: "low",
+      mitre: "T1041",
+      conditions: {
+        all: [
+          { field: "Extra.RemotePort", operator: "not_in", expected: [80, 443, 8080, 22] }
+        ]
+      },
+      reason: log => `Connection using uncommon port: ${log.Extra?.RemotePort}`
+    },
+
+    {
+      name: "HighFrequencyConnections",
+      severity: "low",
+      mitre: "T1071",
       check: log =>
-        log.EventType?.startsWith("Network") &&
-        log.Extra?.RemotePort &&
-        ![80, 443, 22].includes(log.Extra.RemotePort),
-      reason: log => `Uncommon network port used: ${log.Extra?.RemotePort}`
+        log.EventType === "NetworkConnect" &&
+        ["powershell", "cmd", "wscript"].includes(log.ProcessName?.toLowerCase()),
+      reason: log => `Script/tool making network connections: ${log.ProcessName}`
     }
   ]
 };

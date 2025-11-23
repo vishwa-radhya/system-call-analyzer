@@ -1,3 +1,4 @@
+// script for testing
 import { Worker } from "worker_threads";
 import path from "path";
 

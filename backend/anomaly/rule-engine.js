@@ -1,40 +1,60 @@
-import { rulesByType } from './rules.js';
+import { rulesByType } from "./rules.js";
 
-// severity -> numerical weight mapping (can be tuned later)
-const SEVERITY_SCORES = {
+// Base severity scores
+const BASE_SEVERITY = {
   low: 10,
   medium: 25,
   high: 40,
-  critical: 60
+  critical: 60  
 };
 
-export function evaluateRules(event) {
-  const reasons = [];
-  let score = 0;
+function evaluateCondition(event, condition) {
+  const [field, operator, expected] = [
+    condition.field,
+    condition.operator,
+    condition.expected
+  ];
 
-  try {
-    const { EventType } = event;
-    const type = inferType(EventType);
-    if (!type || !rulesByType[type]) return { score, reasons };
+  // Support nested fields like Extra.RemoteAddress
+  const value = field.includes(".")
+    ? field.split(".").reduce((obj, key) => obj?.[key], event)
+    : event[field];
 
-    for (const rule of rulesByType[type]) {
-      if (rule.check(event)) {
-        const ruleScore = SEVERITY_SCORES[rule.severity.toLowerCase()] || 20;
-        score += ruleScore;
-        reasons.push({
-          layer: "Rule",
-          rule: rule.name,
-          score: ruleScore,
-          severity: rule.severity,
-          reason: rule.reason(event)
-        });
-      }
-    }
-  } catch (err) {
-    console.error("Rule engine error:", err);
+  switch (operator) {
+    case "equals":
+      return value === expected;
+
+    case "in":
+      return Array.isArray(expected) && expected.includes(value);
+
+    case "not_in":
+      return Array.isArray(expected) && !expected.includes(value);
+
+    case "contains":
+      return typeof value === "string" && value.toLowerCase().includes(String(expected).toLowerCase());
+
+    case "regex":
+      return new RegExp(expected, "i").test(value || "");
+
+    case "starts_with":
+      return typeof value === "string" && value.startsWith(expected);
+
+    default:
+      return false;
   }
+}
 
-  return { score, reasons };
+/* ----------------------------------------
+   AND / OR Condition Handler for Rules
+-----------------------------------------*/
+function evaluateConditions(event, conditions = {}) {
+  if (conditions.all) {
+    return conditions.all.every(c => evaluateCondition(event, c));
+  }
+  if (conditions.any) {
+    return conditions.any.some(c => evaluateCondition(event, c));
+  }
+  return false;
 }
 
 function inferType(eventType = "") {
@@ -42,4 +62,37 @@ function inferType(eventType = "") {
   if (eventType.startsWith("File")) return "file";
   if (eventType.startsWith("Network")) return "network";
   return null;
+}
+
+export function evaluateRules(event) {
+  const reasons = [];
+  let score = 0;
+
+  const type = inferType(event.EventType);
+  if (!type || !rulesByType[type]) return { score, reasons };
+
+  for (const rule of rulesByType[type]) {
+    const matched =
+      (rule.check && rule.check(event)) ||
+      evaluateConditions(event, rule.conditions);
+
+    if (!matched) continue;
+
+    const severityScore = BASE_SEVERITY[rule.severity.toLowerCase()] || 20;
+    const weightedScore = severityScore + (rule.weight || 0);
+
+    score += weightedScore;
+
+    reasons.push({
+      layer: "Rule",
+      rule: rule.name,
+      severity: rule.severity,
+      mitre: rule.mitre || "N/A",
+      score: weightedScore,
+      matchedConditions: rule.conditions || null,
+      reason: rule.reason(event)
+    });
+  }
+
+  return { score, reasons };
 }

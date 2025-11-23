@@ -184,11 +184,12 @@ const anomalyWorker = new Worker(path.resolve('./anomaly/anomaly-worker.js'));
 console.log("WebSocket server running on ws://localhost:8080");
 
 anomalyWorker.on('message',(msg)=>{
-  if(msg.anomalies && activeClient?.readyState === WebSocket.OPEN){
-    for(const anomaly of msg.anomalies){
-      activeClient.send(JSON.stringify({type:"anomaly",data:anomaly}));
-    }
-  }
+  // if(msg.anomalies && activeClient?.readyState === WebSocket.OPEN){
+  //   for(const anomaly of msg.anomalies){
+  //     activeClient.send(JSON.stringify({type:"anomaly",data:anomaly}));
+  //   }
+  // }
+  console.log(msg)
 })
 
 const dotnetProcess=spawn("dotnet",["run"],{
