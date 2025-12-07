@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { WebSocketServer,WebSocket } from "ws";
-import { fileURLToPath } from "url";
+import { fileURLToPath, pathToFileURL } from "url";
 import { Worker } from "worker_threads";
 import { spawn } from "child_process";
 import express from 'express';
@@ -180,8 +180,12 @@ app.get("/process-tree",async(req,res)=>{
 
 const logFilePath = path.resolve(__dirname, "../logs/SysWatch.jsonl");
 const wss = new WebSocketServer({port:8080});
-const anomalyWorker = new Worker(path.resolve('./anomaly/anomaly-worker.js'));
+const workerPath = path.resolve(__dirname, './anomaly/anomaly-worker.js');
+const workerUrl = pathToFileURL(workerPath);
+console.log("Worker path:", workerPath);
+const anomalyWorker = new Worker(workerUrl);
 console.log("WebSocket server running on ws://localhost:8080");
+
 
 anomalyWorker.on('message',(msg)=>{
   // if(msg.anomalies && activeClient?.readyState === WebSocket.OPEN){
@@ -189,8 +193,16 @@ anomalyWorker.on('message',(msg)=>{
   //     activeClient.send(JSON.stringify({type:"anomaly",data:anomaly}));
   //   }
   // }
-  console.log(msg)
+  console.log('anomaly message: ',msg)
 })
+
+anomalyWorker.on('error', (error) => {
+  console.error('Worker error:', error);
+});
+
+anomalyWorker.on('exit', (code) => {
+  console.log(`Worker exited with code ${code}`);
+});
 
 const dotnetProcess=spawn("dotnet",["run"],{
   cwd:path.resolve(__dirname,"../SysWatchETW"),
@@ -314,6 +326,7 @@ function setupWebSocketServer(wss,logFilePath,dotnetProcess){
       if (activeClient?.readyState === ws.OPEN) {
         activeClient.send(JSON.stringify({type:"log",data:jsonLine}));
       }
+      // console.log("[MAIN] Sending to worker:", jsonLine?.EventType, jsonLine?.ProcessName);
       anomalyWorker.postMessage(jsonLine);
     });
     ws.on("message", (msg) => {

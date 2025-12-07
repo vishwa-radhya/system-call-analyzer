@@ -1,6 +1,6 @@
 import { parentPort } from "worker_threads";
 import { evaluateRules } from "./rule-engine.js";
-import { evaluateBehavior, applyScoreDecay } from "./behavior-engine.js";
+import { evaluateBehavior, applyScoreDecay } from "./behavior-engine-25.js";
 import { 
   MIN_ANOMALY_SCORE, 
   SCORE_DECAY_INTERVAL, 
@@ -51,18 +51,20 @@ setInterval(() => applyScoreDecay(SCORE_DECAY_RATE), SCORE_DECAY_INTERVAL);
 parentPort.on("message", (event) => {
   try {
     if (!event || !event.EventType || !event.ProcessName) return;
-
+    console.log(event.EventType,event.ProcessName)
     // run engines
     const ruleResult = evaluateRules(event);
-    console.log('rr:',ruleResult)
+    console.log('ruleResult: ',ruleResult)
     const behaviorResult = evaluateBehavior(event);
-    console.log('br:',behaviorResult)
+    console.log('behaviorResult: ',behaviorResult)
     // fusion
     const fusedScore = fuseScores(ruleResult.score, behaviorResult.score);
     const severity   = calculateSeverity(fusedScore);
 
     const reasons = mergeReasons(ruleResult.reasons, behaviorResult.reasons);
-
+    console.log('severity: ',severity)
+    console.log('fusedScore: ',fusedScore)
+    console.log('reasons: ',reasons)
     // only emit if exceeding threshold
     if (fusedScore >= MIN_ANOMALY_SCORE) {
       parentPort.postMessage({
