@@ -1,0 +1,1354 @@
+Worker path: E:\capstone-project\backend\anomaly\anomaly-worker.js
+WebSocket server running on ws://localhost:8080
+Server running on http://localhost:5000
+Client connected
+[SysWatch]: E:\capstone-project\SysWatchETW\Program.cs(276,13): warning CS8602: Dereference of a possibly null reference. [E:\capstone-project\SysWatchETW\SysWatchETW.csproj]
+[SysWatch]: [SysWatch] Initialized
+[SysWatch]: [SysWatch] Starting ETW session...
+[SysWatch] Logs -> E:\capstone-project\logs\SysWatch.jsonl
+[SysWatch] Filters -> filters.json
+[SysWatch]: EventTypes: NetworkConnect,NetworkDisconnect,FileRead,FileWrite,FileRename,ProcessStart,ProcessStop
+rr: { score: 0, reasons: [] }
+br: { score: 0, reasons: [] }
+fs: 0 severity: Normal
+reasons: []
+rr: { score: 0, reasons: [] }
+br: { score: 0, reasons: [] }
+fs: 0 severity: Normal
+reasons: []
+rr: { score: 0, reasons: [] }
+anomaly message:  {
+  timestamp: '2025-12-07T13:39:15.910Z',
+  severity: 'Low',
+  finalScore: 3,
+  ruleScore: 0,
+  behaviorScore: 3,
+  reasons: [
+    {
+      layer: 'Behavioral',
+      metric: 'BehaviorProfile',
+      score: 3,
+      severity: 'Low',
+      reason: 'updater anomalous behavior: spawn=0.83, net=0.00, file=0.00, div=0.33, burst=0.43, corr=0.00',
+      vector: [Object],
+      eventFragment: [Object]
+    }
+  ],
+  event: {
+    Timestamp: '2025-12-07T19:09:15.2027054+05:30',
+    EventType: 'ProcessStart',
+    ProcessName: 'updater',
+    Pid: 15944,
+    FilePath: null,
+    Extra: { ParentPid: 17496, ImageFileName: 'updater.exe' }
+  }
+}
+anomaly message:  {
+  timestamp: '2025-12-07T13:39:15.912Z',
+  severity: 'Low',
+  finalScore: 3,
+  ruleScore: 0,
+  behaviorScore: 3,
+  reasons: [
+    {
+      layer: 'Behavioral',
+      metric: 'BehaviorProfile',
+      score: 3,
+      severity: 'Low',
+      reason: 'updater anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.50, corr=0.00',
+      vector: [Object],
+      eventFragment: [Object]
+    }
+  ],
+  event: {
+    Timestamp: '2025-12-07T19:09:15.2486622+05:30',
+    EventType: 'ProcessStart',
+    ProcessName: 'updater',
+    Pid: 22076,
+    FilePath: null,
+    Extra: { ParentPid: 15944, ImageFileName: 'updater.exe' }
+  }
+}
+br: { score: 0, reasons: [] }
+fs: 0 severity: Normal
+reasons: []
+rr: { score: 0, reasons: [] }
+br: { score: 0, reasons: [] }
+fs: 0 severity: Normal
+reasons: []
+rr: { score: 0, reasons: [] }
+br: { score: 0, reasons: [] }
+fs: 0 severity: Normal
+reasons: []
+rr: { score: 0, reasons: [] }
+br: { score: 0, reasons: [] }
+fs: 0 severity: Normal
+reasons: []
+rr: { score: 0, reasons: [] }
+br: { score: 0, reasons: [] }
+fs: 0 severity: Normal
+reasons: []
+rr: { score: 0, reasons: [] }
+br: { score: 0, reasons: [] }
+fs: 0 severity: Normal
+reasons: []
+rr: { score: 0, reasons: [] }
+br: { score: 0, reasons: [] }
+fs: 0 severity: Normal
+reasons: []
+rr: { score: 0, reasons: [] }
+br: {
+  score: 3,
+  reasons: [
+    {
+      layer: 'Behavioral',
+      metric: 'BehaviorProfile',
+      score: 3,
+      severity: 'Low',
+      reason: 'updater anomalous behavior: spawn=0.83, net=0.00, file=0.00, div=0.33, burst=0.43, corr=0.00',
+      vector: [Object],
+      eventFragment: [Object]
+    }
+  ]
+}
+fs: 3 severity: Low
+reasons: [
+  {
+    layer: 'Behavioral',
+    metric: 'BehaviorProfile',
+    score: 3,
+    severity: 'Low',
+    reason: 'updater anomalous behavior: spawn=0.83, net=0.00, file=0.00, div=0.33, burst=0.43, corr=0.00',
+    vector: {
+      spawn: 0.8333333333333334,
+      net: 0,
+      file: 0,
+      div: 0.3333333333333333,
+      burst: 0.42857142857142855,
+      corr: 0
+    },
+    eventFragment: {
+      Timestamp: '2025-12-07T19:09:15.2027054+05:30',
+      EventType: 'ProcessStart',
+      ProcessName: 'updater',
+      Pid: 15944,
+      FilePath: null,
+      Extra: [Object]
+    }
+  }
+]
+rr: { score: 0, reasons: [] }
+br: {
+  score: 3,
+  reasons: [
+    {
+      layer: 'Behavioral',
+      metric: 'BehaviorProfile',
+      score: 3,
+      severity: 'Low',
+      reason: 'updater anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.50, corr=0.00',
+      vector: [Object],
+      eventFragment: [Object]
+    }
+  ]
+}
+fs: 3 severity: Low
+reasons: [
+  {
+    layer: 'Behavioral',
+    metric: 'BehaviorProfile',
+    score: 3,
+    severity: 'Low',
+    reason: 'updater anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.50, corr=0.00',
+    vector: {
+      spawn: 1,
+      net: 0,
+      file: 0,
+      div: 0.3333333333333333,
+      burst: 0.5,
+      corr: 0
+    },
+    eventFragment: {
+      Timestamp: '2025-12-07T19:09:15.2486622+05:30',
+      EventType: 'ProcessStart',
+      ProcessName: 'updater',
+      Pid: 22076,
+      FilePath: null,
+      Extra: [Object]
+    }
+  }
+]
+rr: { score: 0, reasons: [] }
+anomaly message:  {
+  timestamp: '2025-12-07T13:39:16.919Z',
+  severity: 'Low',
+  finalScore: 3,
+  ruleScore: 0,
+  behaviorScore: 3,
+  reasons: [
+    {
+      layer: 'Behavioral',
+      metric: 'BehaviorProfile',
+      score: 3,
+      severity: 'Low',
+      reason: 'updater anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.56, corr=0.00',
+      vector: [Object],
+      eventFragment: [Object]
+    }
+  ],
+  event: {
+    Timestamp: '2025-12-07T19:09:15.31752+05:30',
+    EventType: 'ProcessStart',
+    ProcessName: 'updater',
+    Pid: 19876,
+    FilePath: null,
+    Extra: { ParentPid: 2096, ImageFileName: 'updater.exe' }
+  }
+}
+anomaly message:  {
+  timestamp: '2025-12-07T13:39:16.919Z',
+  severity: 'Low',
+  finalScore: 3,
+  ruleScore: 0,
+  behaviorScore: 3,
+  reasons: [
+    {
+      layer: 'Behavioral',
+      metric: 'BehaviorProfile',
+      score: 3,
+      severity: 'Low',
+      reason: 'updater anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.60, corr=0.00',
+      vector: [Object],
+      eventFragment: [Object]
+    }
+  ],
+  event: {
+    Timestamp: '2025-12-07T19:09:15.3755477+05:30',
+    EventType: 'ProcessStart',
+    ProcessName: 'updater',
+    Pid: 17356,
+    FilePath: null,
+    Extra: { ParentPid: 19876, ImageFileName: 'updater.exe' }
+  }
+}
+anomaly message:  {
+  timestamp: '2025-12-07T13:39:16.919Z',
+  severity: 'Low',
+  finalScore: 3,
+  ruleScore: 0,
+  behaviorScore: 3,
+  reasons: [
+    {
+      layer: 'Behavioral',
+      metric: 'BehaviorProfile',
+      score: 3,
+      severity: 'Low',
+      reason: 'updater anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.64, corr=0.00',
+      vector: [Object],
+      eventFragment: [Object]
+    }
+  ],
+  event: {
+    Timestamp: '2025-12-07T19:09:15.5063708+05:30',
+    EventType: 'ProcessStart',
+    ProcessName: 'updater',
+    Pid: 23796,
+    FilePath: null,
+    Extra: { ParentPid: 2096, ImageFileName: 'updater.exe' }
+  }
+}
+anomaly message:  {
+  timestamp: '2025-12-07T13:39:16.919Z',
+  severity: 'Low',
+  finalScore: 3,
+  ruleScore: 0,
+  behaviorScore: 3,
+  reasons: [
+    {
+      layer: 'Behavioral',
+      metric: 'BehaviorProfile',
+      score: 3,
+      severity: 'Low',
+      reason: 'updater anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.67, corr=0.00',
+      vector: [Object],
+      eventFragment: [Object]
+    }
+  ],
+  event: {
+    Timestamp: '2025-12-07T19:09:15.5676431+05:30',
+    EventType: 'ProcessStart',
+    ProcessName: 'updater',
+    Pid: 10944,
+    FilePath: null,
+    Extra: { ParentPid: 23796, ImageFileName: 'updater.exe' }
+  }
+}
+br: {
+  score: 3,
+  reasons: [
+    {
+      layer: 'Behavioral',
+      metric: 'BehaviorProfile',
+      score: 3,
+      severity: 'Low',
+      reason: 'updater anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.56, corr=0.00',
+      vector: [Object],
+      eventFragment: [Object]
+    }
+  ]
+}
+fs: 3 severity: Low
+reasons: [
+  {
+    layer: 'Behavioral',
+    metric: 'BehaviorProfile',
+    score: 3,
+    severity: 'Low',
+    reason: 'updater anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.56, corr=0.00',
+    vector: {
+      spawn: 1,
+      net: 0,
+      file: 0,
+      div: 0.3333333333333333,
+      burst: 0.5555555555555556,
+      corr: 0
+    },
+    eventFragment: {
+      Timestamp: '2025-12-07T19:09:15.31752+05:30',
+      EventType: 'ProcessStart',
+      ProcessName: 'updater',
+      Pid: 19876,
+      FilePath: null,
+      Extra: [Object]
+    }
+  }
+]
+rr: { score: 0, reasons: [] }
+br: {
+  score: 3,
+  reasons: [
+    {
+      layer: 'Behavioral',
+      metric: 'BehaviorProfile',
+      score: 3,
+      severity: 'Low',
+      reason: 'updater anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.60, corr=0.00',
+      vector: [Object],
+      eventFragment: [Object]
+    }
+  ]
+}
+fs: 3 severity: Low
+reasons: [
+  {
+    layer: 'Behavioral',
+    metric: 'BehaviorProfile',
+    score: 3,
+    severity: 'Low',
+    reason: 'updater anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.60, corr=0.00',
+    vector: {
+      spawn: 1,
+      net: 0,
+      file: 0,
+      div: 0.3333333333333333,
+      burst: 0.6,
+      corr: 0
+    },
+    eventFragment: {
+      Timestamp: '2025-12-07T19:09:15.3755477+05:30',
+      EventType: 'ProcessStart',
+      ProcessName: 'updater',
+      Pid: 17356,
+      FilePath: null,
+      Extra: [Object]
+    }
+  }
+]
+rr: { score: 0, reasons: [] }
+br: {
+  score: 3,
+  reasons: [
+    {
+      layer: 'Behavioral',
+      metric: 'BehaviorProfile',
+      score: 3,
+      severity: 'Low',
+      reason: 'updater anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.64, corr=0.00',
+      vector: [Object],
+      eventFragment: [Object]
+    }
+  ]
+}
+fs: 3 severity: Low
+reasons: [
+  {
+    layer: 'Behavioral',
+    metric: 'BehaviorProfile',
+    score: 3,
+    severity: 'Low',
+    reason: 'updater anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.64, corr=0.00',
+    vector: {
+      spawn: 1,
+      net: 0,
+      file: 0,
+      div: 0.3333333333333333,
+      burst: 0.6363636363636364,
+      corr: 0
+    },
+    eventFragment: {
+      Timestamp: '2025-12-07T19:09:15.5063708+05:30',
+      EventType: 'ProcessStart',
+      ProcessName: 'updater',
+      Pid: 23796,
+      FilePath: null,
+      Extra: [Object]
+    }
+  }
+]
+rr: { score: 0, reasons: [] }
+br: {
+  score: 3,
+  reasons: [
+    {
+      layer: 'Behavioral',
+      metric: 'BehaviorProfile',
+      score: 3,
+      severity: 'Low',
+      reason: 'updater anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.67, corr=0.00',
+      vector: [Object],
+      eventFragment: [Object]
+    }
+  ]
+}
+fs: 3 severity: Low
+reasons: [
+  {
+    layer: 'Behavioral',
+    metric: 'BehaviorProfile',
+    score: 3,
+    severity: 'Low',
+    reason: 'updater anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.67, corr=0.00',
+    vector: {
+      spawn: 1,
+      net: 0,
+      file: 0,
+      div: 0.3333333333333333,
+      burst: 0.6666666666666666,
+      corr: 0
+    },
+    eventFragment: {
+      Timestamp: '2025-12-07T19:09:15.5676431+05:30',
+      EventType: 'ProcessStart',
+      ProcessName: 'updater',
+      Pid: 10944,
+      FilePath: null,
+      Extra: [Object]
+    }
+  }
+]
+rr: {
+  score: 6,
+  reasons: [
+    {
+      layer: 'Rule',
+      rule: 'ExternalIPConnection',
+      severity: 'medium',
+      mitre: 'T1105',
+      score: 6,
+      matchedConditions: null,
+      reason: 'External connection from pwsh to 20.37.198.118:443'
+    }
+  ]
+}
+anomaly message:  {
+  timestamp: '2025-12-07T13:39:19.974Z',
+  severity: 'Medium',
+  finalScore: 6,
+  ruleScore: 6,
+  behaviorScore: 0,
+  reasons: [
+    {
+      layer: 'Rule',
+      rule: 'ExternalIPConnection',
+      severity: 'medium',
+      mitre: 'T1105',
+      score: 6,
+      matchedConditions: null,
+      reason: 'External connection from pwsh to 20.37.198.118:443'
+    }
+  ],
+  event: {
+    Timestamp: '2025-12-07T19:09:17.3750598+05:30',
+    EventType: 'NetworkConnect',
+    ProcessName: 'pwsh',
+    Pid: 10476,
+    FilePath: null,
+    Extra: {
+      Operation: 'Connect',
+      Protocol: 'TCP',
+      LocalAddress: '10.201.58.186',
+      LocalPort: 43103,
+      RemoteAddress: '20.37.198.118',
+      RemotePort: 443
+    }
+  }
+}
+br: { score: 0, reasons: [] }
+fs: 6 severity: Medium
+reasons: [
+  {
+    layer: 'Rule',
+    rule: 'ExternalIPConnection',
+    severity: 'medium',
+    mitre: 'T1105',
+    score: 6,
+    matchedConditions: null,
+    reason: 'External connection from pwsh to 20.37.198.118:443'
+  }
+]
+rr: { score: 0, reasons: [] }
+anomaly message:  {
+  timestamp: '2025-12-07T13:39:21.002Z',
+  severity: 'Low',
+  finalScore: 3,
+  ruleScore: 0,
+  behaviorScore: 3,
+  reasons: [
+    {
+      layer: 'Behavioral',
+      metric: 'BehaviorProfile',
+      score: 3,
+      severity: 'Low',
+      reason: 'updater anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.54, corr=0.00',
+      vector: [Object],
+      eventFragment: [Object]
+    }
+  ],
+  event: {
+    Timestamp: '2025-12-07T19:09:19.81465+05:30',
+    EventType: 'ProcessStop',
+    ProcessName: 'updater',
+    Pid: 15944,
+    FilePath: null,
+    Extra: null
+  }
+}
+anomaly message:  {
+  timestamp: '2025-12-07T13:39:21.002Z',
+  severity: 'Low',
+  finalScore: 3,
+  ruleScore: 0,
+  behaviorScore: 3,
+  reasons: [
+    {
+      layer: 'Behavioral',
+      metric: 'BehaviorProfile',
+      score: 3,
+      severity: 'Low',
+      reason: 'updater anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.43, corr=0.00',
+      vector: [Object],
+      eventFragment: [Object]
+    }
+  ],
+  event: {
+    Timestamp: '2025-12-07T19:09:19.8262983+05:30',
+    EventType: 'ProcessStop',
+    ProcessName: 'updater',
+    Pid: 22076,
+    FilePath: null,
+    Extra: null
+  }
+}
+anomaly message:  {
+  timestamp: '2025-12-07T13:39:21.003Z',
+  severity: 'Low',
+  finalScore: 3,
+  ruleScore: 0,
+  behaviorScore: 3,
+  reasons: [
+    {
+      layer: 'Behavioral',
+      metric: 'BehaviorProfile',
+      score: 3,
+      severity: 'Low',
+      reason: 'updater anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.33, corr=0.00',
+      vector: [Object],
+      eventFragment: [Object]
+    }
+  ],
+  event: {
+    Timestamp: '2025-12-07T19:09:19.8263528+05:30',
+    EventType: 'ProcessStop',
+    ProcessName: 'updater',
+    Pid: 17496,
+    FilePath: null,
+    Extra: null
+  }
+}
+br: {
+  score: 3,
+  reasons: [
+    {
+      layer: 'Behavioral',
+      metric: 'BehaviorProfile',
+      score: 3,
+      severity: 'Low',
+      reason: 'updater anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.54, corr=0.00',
+      vector: [Object],
+      eventFragment: [Object]
+    }
+  ]
+}
+fs: 3 severity: Low
+reasons: [
+  {
+    layer: 'Behavioral',
+    metric: 'BehaviorProfile',
+    score: 3,
+    severity: 'Low',
+    reason: 'updater anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.54, corr=0.00',
+    vector: {
+      spawn: 1,
+      net: 0,
+      file: 0,
+      div: 0.3333333333333333,
+      burst: 0.5384615384615384,
+      corr: 0
+    },
+    eventFragment: {
+      Timestamp: '2025-12-07T19:09:19.81465+05:30',
+      EventType: 'ProcessStop',
+      ProcessName: 'updater',
+      Pid: 15944,
+      FilePath: null,
+      Extra: null
+    }
+  }
+]
+rr: { score: 0, reasons: [] }
+br: {
+  score: 3,
+  reasons: [
+    {
+      layer: 'Behavioral',
+      metric: 'BehaviorProfile',
+      score: 3,
+      severity: 'Low',
+      reason: 'updater anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.43, corr=0.00',
+      vector: [Object],
+      eventFragment: [Object]
+    }
+  ]
+}
+fs: 3 severity: Low
+reasons: [
+  {
+    layer: 'Behavioral',
+    metric: 'BehaviorProfile',
+    score: 3,
+    severity: 'Low',
+    reason: 'updater anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.43, corr=0.00',
+    vector: {
+      spawn: 1,
+      net: 0,
+      file: 0,
+      div: 0.3333333333333333,
+      burst: 0.42857142857142855,
+      corr: 0
+    },
+    eventFragment: {
+      Timestamp: '2025-12-07T19:09:19.8262983+05:30',
+      EventType: 'ProcessStop',
+      ProcessName: 'updater',
+      Pid: 22076,
+      FilePath: null,
+      Extra: null
+    }
+  }
+]
+rr: { score: 0, reasons: [] }
+br: {
+  score: 3,
+  reasons: [
+    {
+      layer: 'Behavioral',
+      metric: 'BehaviorProfile',
+      score: 3,
+      severity: 'Low',
+      reason: 'updater anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.33, corr=0.00',
+      vector: [Object],
+      eventFragment: [Object]
+    }
+  ]
+}
+fs: 3 severity: Low
+reasons: [
+  {
+    layer: 'Behavioral',
+    metric: 'BehaviorProfile',
+    score: 3,
+    severity: 'Low',
+    reason: 'updater anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.33, corr=0.00',
+    vector: {
+      spawn: 1,
+      net: 0,
+      file: 0,
+      div: 0.3333333333333333,
+      burst: 0.3333333333333333,
+      corr: 0
+    },
+    eventFragment: {
+      Timestamp: '2025-12-07T19:09:19.8263528+05:30',
+      EventType: 'ProcessStop',
+      ProcessName: 'updater',
+      Pid: 17496,
+      FilePath: null,
+      Extra: null
+    }
+  }
+]
+rr: { score: 0, reasons: [] }
+anomaly message:  {
+  timestamp: '2025-12-07T13:39:22.025Z',
+  severity: 'Low',
+  finalScore: 3,
+  ruleScore: 0,
+  behaviorScore: 3,
+  reasons: [
+    {
+      layer: 'Behavioral',
+      metric: 'BehaviorProfile',
+      score: 3,
+      severity: 'Low',
+      reason: 'updater anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.25, corr=0.00',
+      vector: [Object],
+      eventFragment: [Object]
+    }
+  ],
+  event: {
+    Timestamp: '2025-12-07T19:09:19.8381844+05:30',
+    EventType: 'ProcessStop',
+    ProcessName: 'updater',
+    Pid: 21372,
+    FilePath: null,
+    Extra: null
+  }
+}
+br: {
+  score: 3,
+  reasons: [
+    {
+      layer: 'Behavioral',
+      metric: 'BehaviorProfile',
+      score: 3,
+      severity: 'Low',
+      reason: 'updater anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.25, corr=0.00',
+      vector: [Object],
+      eventFragment: [Object]
+    }
+  ]
+}
+fs: 3 severity: Low
+reasons: [
+  {
+    layer: 'Behavioral',
+    metric: 'BehaviorProfile',
+    score: 3,
+    severity: 'Low',
+    reason: 'updater anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.25, corr=0.00',
+    vector: {
+      spawn: 1,
+      net: 0,
+      file: 0,
+      div: 0.3333333333333333,
+      burst: 0.25,
+      corr: 0
+    },
+    eventFragment: {
+      Timestamp: '2025-12-07T19:09:19.8381844+05:30',
+      EventType: 'ProcessStop',
+      ProcessName: 'updater',
+      Pid: 21372,
+      FilePath: null,
+      Extra: null
+    }
+  }
+]
+rr: { score: 0, reasons: [] }
+br: { score: 0, reasons: [] }
+fs: 0 severity: Normal
+reasons: []
+rr: { score: 0, reasons: [] }
+br: { score: 0, reasons: [] }
+fs: 0 severity: Normal
+reasons: []
+rr: { score: 0, reasons: [] }
+br: { score: 0, reasons: [] }
+fs: 0 severity: Normal
+reasons: []
+rr: { score: 0, reasons: [] }
+br: { score: 0, reasons: [] }
+fs: 0 severity: Normal
+reasons: []
+rr: { score: 0, reasons: [] }
+br: { score: 0, reasons: [] }
+fs: 0 severity: Normal
+reasons: []
+rr: { score: 0, reasons: [] }
+br: { score: 0, reasons: [] }
+fs: 0 severity: Normal
+reasons: []
+rr: { score: 0, reasons: [] }
+anomaly message:  {
+  timestamp: '2025-12-07T13:39:30.729Z',
+  severity: 'Low',
+  finalScore: 3,
+  ruleScore: 0,
+  behaviorScore: 3,
+  reasons: [
+    {
+      layer: 'Behavioral',
+      metric: 'BehaviorProfile',
+      score: 3,
+      severity: 'Low',
+      reason: 'updater anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.18, corr=0.00',
+      vector: [Object],
+      eventFragment: [Object]
+    }
+  ],
+  event: {
+    Timestamp: '2025-12-07T19:09:29.8199414+05:30',
+    EventType: 'ProcessStop',
+    ProcessName: 'updater',
+    Pid: 19876,
+    FilePath: null,
+    Extra: null
+  }
+}
+anomaly message:  {
+  timestamp: '2025-12-07T13:39:30.729Z',
+  severity: 'Low',
+  finalScore: 3,
+  ruleScore: 0,
+  behaviorScore: 3,
+  reasons: [
+    {
+      layer: 'Behavioral',
+      metric: 'BehaviorProfile',
+      score: 3,
+      severity: 'Low',
+      reason: 'updater anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.11, corr=0.00',
+      vector: [Object],
+      eventFragment: [Object]
+    }
+  ],
+  event: {
+    Timestamp: '2025-12-07T19:09:29.8203497+05:30',
+    EventType: 'ProcessStop',
+    ProcessName: 'updater',
+    Pid: 23796,
+    FilePath: null,
+    Extra: null
+  }
+}
+br: { score: 0, reasons: [] }
+fs: 0 severity: Normal
+reasons: []
+rr: { score: 0, reasons: [] }
+br: {
+  score: 3,
+  reasons: [
+    {
+      layer: 'Behavioral',
+      metric: 'BehaviorProfile',
+      score: 3,
+      severity: 'Low',
+      reason: 'updater anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.18, corr=0.00',
+      vector: [Object],
+      eventFragment: [Object]
+    }
+  ]
+}
+fs: 3 severity: Low
+reasons: [
+  {
+    layer: 'Behavioral',
+    metric: 'BehaviorProfile',
+    score: 3,
+    severity: 'Low',
+    reason: 'updater anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.18, corr=0.00',
+    vector: {
+      spawn: 1,
+      net: 0,
+      file: 0,
+      div: 0.3333333333333333,
+      burst: 0.17647058823529413,
+      corr: 0
+    },
+    eventFragment: {
+      Timestamp: '2025-12-07T19:09:29.8199414+05:30',
+      EventType: 'ProcessStop',
+      ProcessName: 'updater',
+      Pid: 19876,
+      FilePath: null,
+      Extra: null
+    }
+  }
+]
+rr: { score: 0, reasons: [] }
+br: {
+  score: 3,
+  reasons: [
+    {
+      layer: 'Behavioral',
+      metric: 'BehaviorProfile',
+      score: 3,
+      severity: 'Low',
+      reason: 'updater anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.11, corr=0.00',
+      vector: [Object],
+      eventFragment: [Object]
+    }
+  ]
+}
+fs: 3 severity: Low
+reasons: [
+  {
+    layer: 'Behavioral',
+    metric: 'BehaviorProfile',
+    score: 3,
+    severity: 'Low',
+    reason: 'updater anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.11, corr=0.00',
+    vector: {
+      spawn: 1,
+      net: 0,
+      file: 0,
+      div: 0.3333333333333333,
+      burst: 0.1111111111111111,
+      corr: 0
+    },
+    eventFragment: {
+      Timestamp: '2025-12-07T19:09:29.8203497+05:30',
+      EventType: 'ProcessStop',
+      ProcessName: 'updater',
+      Pid: 23796,
+      FilePath: null,
+      Extra: null
+    }
+  }
+]
+rr: { score: 0, reasons: [] }
+anomaly message:  {
+  timestamp: '2025-12-07T13:39:32.998Z',
+  severity: 'Low',
+  finalScore: 3,
+  ruleScore: 0,
+  behaviorScore: 3,
+  reasons: [
+    {
+      layer: 'Behavioral',
+      metric: 'BehaviorProfile',
+      score: 3,
+      severity: 'Low',
+      reason: 'updater anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.05, corr=0.00',
+      vector: [Object],
+      eventFragment: [Object]
+    }
+  ],
+  event: {
+    Timestamp: '2025-12-07T19:09:29.8361136+05:30',
+    EventType: 'ProcessStop',
+    ProcessName: 'updater',
+    Pid: 17356,
+    FilePath: null,
+    Extra: null
+  }
+}
+anomaly message:  {
+  timestamp: '2025-12-07T13:39:32.998Z',
+  severity: 'Low',
+  finalScore: 3,
+  ruleScore: 0,
+  behaviorScore: 3,
+  reasons: [
+    {
+      layer: 'Behavioral',
+      metric: 'BehaviorProfile',
+      score: 3,
+      severity: 'Low',
+      reason: 'updater anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.00, corr=0.00',
+      vector: [Object],
+      eventFragment: [Object]
+    }
+  ],
+  event: {
+    Timestamp: '2025-12-07T19:09:29.8363533+05:30',
+    EventType: 'ProcessStop',
+    ProcessName: 'updater',
+    Pid: 10944,
+    FilePath: null,
+    Extra: null
+  }
+}
+br: {
+  score: 3,
+  reasons: [
+    {
+      layer: 'Behavioral',
+      metric: 'BehaviorProfile',
+      score: 3,
+      severity: 'Low',
+      reason: 'updater anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.05, corr=0.00',
+      vector: [Object],
+      eventFragment: [Object]
+    }
+  ]
+}
+fs: 3 severity: Low
+reasons: [
+  {
+    layer: 'Behavioral',
+    metric: 'BehaviorProfile',
+    score: 3,
+    severity: 'Low',
+    reason: 'updater anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.05, corr=0.00',
+    vector: {
+      spawn: 1,
+      net: 0,
+      file: 0,
+      div: 0.3333333333333333,
+      burst: 0.05263157894736842,
+      corr: 0
+    },
+    eventFragment: {
+      Timestamp: '2025-12-07T19:09:29.8361136+05:30',
+      EventType: 'ProcessStop',
+      ProcessName: 'updater',
+      Pid: 17356,
+      FilePath: null,
+      Extra: null
+    }
+  }
+]
+rr: { score: 0, reasons: [] }
+br: {
+  score: 3,
+  reasons: [
+    {
+      layer: 'Behavioral',
+      metric: 'BehaviorProfile',
+      score: 3,
+      severity: 'Low',
+      reason: 'updater anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.00, corr=0.00',
+      vector: [Object],
+      eventFragment: [Object]
+    }
+  ]
+}
+fs: 3 severity: Low
+reasons: [
+  {
+    layer: 'Behavioral',
+    metric: 'BehaviorProfile',
+    score: 3,
+    severity: 'Low',
+    reason: 'updater anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.00, corr=0.00',
+    vector: {
+      spawn: 1,
+      net: 0,
+      file: 0,
+      div: 0.3333333333333333,
+      burst: 0,
+      corr: 0
+    },
+    eventFragment: {
+      Timestamp: '2025-12-07T19:09:29.8363533+05:30',
+      EventType: 'ProcessStop',
+      ProcessName: 'updater',
+      Pid: 10944,
+      FilePath: null,
+      Extra: null
+    }
+  }
+]
+rr: { score: 0, reasons: [] }
+br: { score: 0, reasons: [] }
+fs: 0 severity: Normal
+reasons: []
+rr: { score: 0, reasons: [] }
+br: { score: 0, reasons: [] }
+fs: 0 severity: Normal
+reasons: []
+Shutting down backend..
+Sending EXIT to SysWatch..
+[SysWatch] exited with code 3221225786
+Force killing SysWatch process..
+
+************** after refactor ***********************
+anomaly message:  {
+  timestamp: '2025-12-07T14:00:28.987Z',
+  severity: 'Low',
+  finalScore: 4,
+  ruleScore: 0,
+  behaviorScore: 4,
+  reasons: [
+    {
+      layer: 'Behavioral',
+      metric: 'BehaviorProfile',
+      score: 4,
+      severity: 'Low',
+      reason: 'updater anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.71, corr=0.00',
+      vector: [Object],
+      eventFragment: [Object]
+    }
+  ],
+  event: {
+    Timestamp: '2025-12-07T19:30:28.4144524+05:30',
+    EventType: 'ProcessStop',
+    ProcessName: 'updater',
+    Pid: 15072,
+    FilePath: null,
+    Extra: null
+  }
+}
+anomaly message:  {
+  timestamp: '2025-12-07T14:00:29.559Z',
+  severity: 'Low',
+  finalScore: 3,
+  ruleScore: 0,
+  behaviorScore: 3,
+  reasons: [
+    {
+      layer: 'Behavioral',
+      metric: 'BehaviorProfile',
+      score: 3,
+      severity: 'Low',
+      reason: 'updater anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.50, corr=0.00',
+      vector: [Object],
+      eventFragment: [Object]
+    }
+  ],
+  event: {
+    Timestamp: '2025-12-07T19:30:28.4300172+05:30',
+    EventType: 'ProcessStop',
+    ProcessName: 'updater',
+    Pid: 4576,
+    FilePath: null,
+    Extra: null
+  }
+}
+sent control: STOP
+[SysWatch]: [SysWatch] Logging paused and file handle closed.
+sent control: START
+[SysWatch]: [SysWatch] Logging resumed and file hanlde reopened.
+anomaly message:  {
+  timestamp: '2025-12-07T14:00:39.669Z',
+  severity: 'Low',
+  finalScore: 3,
+  ruleScore: 0,
+  behaviorScore: 3,
+  reasons: [
+    {
+      layer: 'Behavioral',
+      metric: 'BehaviorProfile',
+      score: 3,
+      severity: 'Low',
+      reason: 'updater anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.33, corr=0.00',
+      vector: [Object],
+      eventFragment: [Object]
+    }
+  ],
+  event: {
+    Timestamp: '2025-12-07T19:30:38.4382734+05:30',
+    EventType: 'ProcessStop',
+    ProcessName: 'updater',
+    Pid: 16772,
+    FilePath: null,
+    Extra: null
+  }
+}
+anomaly message:  {
+  timestamp: '2025-12-07T14:01:06.086Z',
+  severity: 'Low',
+  finalScore: 3,
+  ruleScore: 0,
+  behaviorScore: 3,
+  reasons: [
+    {
+      layer: 'Behavioral',
+      metric: 'BehaviorProfile',
+      score: 3,
+      severity: 'Low',
+      reason: 'git anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.20, corr=0.00',
+      vector: [Object],
+      eventFragment: [Object]
+    }
+  ],
+  event: {
+    Timestamp: '2025-12-07T19:31:05.1811629+05:30',
+    EventType: 'ProcessStart',
+    ProcessName: 'git',
+    Pid: 15220,
+    FilePath: null,
+    Extra: { ParentPid: 21388, ImageFileName: 'git.exe' }
+  }
+}
+anomaly message:  {
+  timestamp: '2025-12-07T14:01:06.086Z',
+  severity: 'Low',
+  finalScore: 3,
+  ruleScore: 0,
+  behaviorScore: 3,
+  reasons: [
+    {
+      layer: 'Behavioral',
+      metric: 'BehaviorProfile',
+      score: 3,
+      severity: 'Low',
+      reason: 'git anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.27, corr=0.00',
+      vector: [Object],
+      eventFragment: [Object]
+    }
+  ],
+  event: {
+    Timestamp: '2025-12-07T19:31:05.2005144+05:30',
+    EventType: 'ProcessStart',
+    ProcessName: 'git',
+    Pid: 6512,
+    FilePath: null,
+    Extra: { ParentPid: 9632, ImageFileName: 'git.exe' }
+  }
+}
+anomaly message:  {
+  timestamp: '2025-12-07T14:01:06.087Z',
+  severity: 'Low',
+  finalScore: 3,
+  ruleScore: 0,
+  behaviorScore: 3,
+  reasons: [
+    {
+      layer: 'Behavioral',
+      metric: 'BehaviorProfile',
+      score: 3,
+      severity: 'Low',
+      reason: 'git anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.33, corr=0.00',
+      vector: [Object],
+      eventFragment: [Object]
+    }
+  ],
+  event: {
+    Timestamp: '2025-12-07T19:31:05.2070306+05:30',
+    EventType: 'ProcessStart',
+    ProcessName: 'git',
+    Pid: 18220,
+    FilePath: null,
+    Extra: { ParentPid: 15220, ImageFileName: 'git.exe' }
+  }
+}
+anomaly message:  {
+  timestamp: '2025-12-07T14:01:06.087Z',
+  severity: 'Low',
+  finalScore: 3,
+  ruleScore: 0,
+  behaviorScore: 3,
+  reasons: [
+    {
+      layer: 'Behavioral',
+      metric: 'BehaviorProfile',
+      score: 3,
+      severity: 'Low',
+      reason: 'git anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.23, corr=0.00',
+      vector: [Object],
+      eventFragment: [Object]
+    }
+  ],
+  event: {
+    Timestamp: '2025-12-07T19:31:05.2250466+05:30',
+    EventType: 'ProcessStop',
+    ProcessName: 'git',
+    Pid: 6512,
+    FilePath: null,
+    Extra: null
+  }
+}
+anomaly message:  {
+  timestamp: '2025-12-07T14:01:06.087Z',
+  severity: 'Low',
+  finalScore: 3,
+  ruleScore: 0,
+  behaviorScore: 3,
+  reasons: [
+    {
+      layer: 'Behavioral',
+      metric: 'BehaviorProfile',
+      score: 3,
+      severity: 'Low',
+      reason: 'git anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.14, corr=0.00',
+      vector: [Object],
+      eventFragment: [Object]
+    }
+  ],
+  event: {
+    Timestamp: '2025-12-07T19:31:05.2271938+05:30',
+    EventType: 'ProcessStop',
+    ProcessName: 'git',
+    Pid: 9632,
+    FilePath: null,
+    Extra: null
+  }
+}
+anomaly message:  {
+  timestamp: '2025-12-07T14:01:06.087Z',
+  severity: 'Low',
+  finalScore: 3,
+  ruleScore: 0,
+  behaviorScore: 3,
+  reasons: [
+    {
+      layer: 'Behavioral',
+      metric: 'BehaviorProfile',
+      score: 3,
+      severity: 'Low',
+      reason: 'git anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.07, corr=0.00',
+      vector: [Object],
+      eventFragment: [Object]
+    }
+  ],
+  event: {
+    Timestamp: '2025-12-07T19:31:05.2287086+05:30',
+    EventType: 'ProcessStop',
+    ProcessName: 'git',
+    Pid: 18220,
+    FilePath: null,
+    Extra: null
+  }
+}
+anomaly message:  {
+  timestamp: '2025-12-07T14:01:06.087Z',
+  severity: 'Low',
+  finalScore: 3,
+  ruleScore: 0,
+  behaviorScore: 3,
+  reasons: [
+    {
+      layer: 'Behavioral',
+      metric: 'BehaviorProfile',
+      score: 3,
+      severity: 'Low',
+      reason: 'git anomalous behavior: spawn=1.00, net=0.00, file=0.00, div=0.33, burst=0.00, corr=0.00',
+      vector: [Object],
+      eventFragment: [Object]
+    }
+  ],
+  event: {
+    Timestamp: '2025-12-07T19:31:05.2309648+05:30',
+    EventType: 'ProcessStop',
+    ProcessName: 'git',
+    Pid: 15220,
+    FilePath: null,
+    Extra: null
+  }
+}
+Shutting down backend..
+Sending EXIT to SysWatch..
+[SysWatch] exited with code 3221225786
+Force killing SysWatch process..

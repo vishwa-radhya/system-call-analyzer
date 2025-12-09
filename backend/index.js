@@ -193,7 +193,7 @@ anomalyWorker.on('message',(msg)=>{
   //     activeClient.send(JSON.stringify({type:"anomaly",data:anomaly}));
   //   }
   // }
-  console.log('anomaly message: ',msg)
+  console.log('anomaly message: ',msg.severity,msg.ruleScore,msg.behaviorScore,msg.finalScore,msg.reasons[0].reason)
 })
 
 anomalyWorker.on('error', (error) => {

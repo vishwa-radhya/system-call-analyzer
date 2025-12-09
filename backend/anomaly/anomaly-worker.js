@@ -1,77 +1,104 @@
+// anomaly-worker.js
 import { parentPort } from "worker_threads";
 import { evaluateRules } from "./rule-engine.js";
-import { evaluateBehavior, applyScoreDecay } from "./behavior-engine-25.js";
-import { 
-  MIN_ANOMALY_SCORE, 
-  SCORE_DECAY_INTERVAL, 
-  SCORE_DECAY_RATE, 
-  SEVERITY_THRESHOLDS 
+import { evaluateBehavior, applyScoreDecay } from "./behavior-engine-25.js"; 
+import {
+  MIN_ANOMALY_SCORE,
+  SCORE_DECAY_INTERVAL,
+  SCORE_DECAY_RATE,
+  SEVERITY_THRESHOLDS
 } from "./config.js";
 
-// ----------- FINAL SEVERITY MAPPING -------------
+
+// ==========================================================
+//  SEVERITY MAPPING (0–12 scale)
+// ==========================================================
 function calculateSeverity(score) {
-  if (score < SEVERITY_THRESHOLDS.Low)      return "Normal";
-  if (score < SEVERITY_THRESHOLDS.Medium)   return "Low";
-  if (score < SEVERITY_THRESHOLDS.High)     return "Medium";
-  if (score < SEVERITY_THRESHOLDS.Critical) return "High";
+  if (score <= SEVERITY_THRESHOLDS.Low)     return "Normal";
+  if (score <= SEVERITY_THRESHOLDS.Medium)  return "Low";
+  if (score <= SEVERITY_THRESHOLDS.High)    return "Medium";
+  if (score <= SEVERITY_THRESHOLDS.Critical)return "High";
   return "Critical";
 }
 
-// ---------- NORMALIZATION + WEIGHTED FUSION ------
+
+// ==========================================================
+//  SCORE FUSION — SIMPLE, INTERPRETABLE (0–12)
+// ==========================================================
 function fuseScores(ruleScore, behaviorScore) {
-  // weights — can be tuned later
-  const RULE_WEIGHT = 0.6;
-  const BEHAV_WEIGHT = 0.4;
-
-  // ensure ratio stays within 0–100 scale
-  const finalScore = 
-      (ruleScore * RULE_WEIGHT) + 
-      (behaviorScore * BEHAV_WEIGHT);
-
-  return Math.min(100, Math.floor(finalScore));
+  const raw = ruleScore + behaviorScore;
+  return Math.min(12, Math.floor(raw));
 }
 
-// ----------- MERGE & SORT REASONS ---------------
-function mergeReasons(ruleReasons, behReasons) {
-  const merged = [...ruleReasons, ...behReasons];
 
-  // Sort: highest score reason first
+// ==========================================================
+//  REASON MERGING (sorted by score desc)
+// ==========================================================
+function mergeReasons(ruleReasons, behReasons) {
+  const merged = [...(ruleReasons || []), ...(behReasons || [])];
+
   merged.sort((a, b) => (b.score || 0) - (a.score || 0));
 
   return merged;
 }
 
-// ----------- PERIODIC DECAY ----------------------
+
+// ==========================================================
+//  PERIODIC BEHAVIOR DECAY
+// ==========================================================
 setInterval(() => applyScoreDecay(SCORE_DECAY_RATE), SCORE_DECAY_INTERVAL);
 
 
-// =================================================
-//                MAIN EVENT HANDLER
-// =================================================
+// ==========================================================
+//  MAIN WORKER HANDLER
+// ==========================================================
 parentPort.on("message", (event) => {
   try {
-    if (!event || !event.EventType || !event.ProcessName) return;
-    console.log(event.EventType,event.ProcessName)
-    // run engines
-    const ruleResult = evaluateRules(event);
-    console.log('ruleResult: ',ruleResult)
-    const behaviorResult = evaluateBehavior(event);
-    console.log('behaviorResult: ',behaviorResult)
-    // fusion
-    const fusedScore = fuseScores(ruleResult.score, behaviorResult.score);
-    const severity   = calculateSeverity(fusedScore);
+    // guard
+    if (!event?.EventType || !event?.ProcessName) return;
 
-    const reasons = mergeReasons(ruleResult.reasons, behaviorResult.reasons);
-    console.log('severity: ',severity)
-    console.log('fusedScore: ',fusedScore)
-    console.log('reasons: ',reasons)
-    // only emit if exceeding threshold
+    // ---------------------------------------------
+    // 1. Run detection engines
+    // ---------------------------------------------
+    const ruleResult = evaluateRules(event);
+    // console.log('rr:',ruleResult)
+    const behaviorResult = evaluateBehavior(event);
+    // console.log('br:',behaviorResult)
+    const ruleScore = ruleResult.score || 0;
+    const behaviorScore = behaviorResult.score || 0;
+
+    // ---------------------------------------------
+    // 2. Fuse scores into unified anomaly score
+    // ---------------------------------------------
+    const fusedScore = fuseScores(ruleScore, behaviorScore);
+
+    // ---------------------------------------------
+    // 3. Determine severity
+    // ---------------------------------------------
+    const severity = calculateSeverity(fusedScore);
+
+    // ---------------------------------------------
+    // 4. Aggregate explanations
+    // ---------------------------------------------
+    const reasons = mergeReasons(
+      ruleResult.reasons,
+      behaviorResult.reasons
+    );
+    // console.log('fs:',fusedScore,'severity:',severity)
+    // console.log('reasons:',reasons)
+    // ---------------------------------------------
+    // 5. Emit anomaly (only if meaningful)
+    // ---------------------------------------------
     if (fusedScore >= MIN_ANOMALY_SCORE) {
       parentPort.postMessage({
+        timestamp: new Date().toISOString(),
+
         severity,
         finalScore: fusedScore,
-        ruleScore: ruleResult.score,
-        behaviorScore: behaviorResult.score,
+
+        ruleScore,
+        behaviorScore,
+
         reasons,
         event
       });

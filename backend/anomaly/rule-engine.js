@@ -1,19 +1,18 @@
+// rule-engine.js (updated)
 import { rulesByType } from "./rules.js";
 
-// Base severity scores
-const BASE_SEVERITY = {
-  low: 10,
-  medium: 25,
-  high: 40,
-  critical: 60  
+// Normalized base severity scores (small, fusion-friendly)
+const BASE_SEVERITY = { 
+  low: 2,
+  medium: 5,
+  high: 8,
+  critical: 12
 };
 
 function evaluateCondition(event, condition) {
-  const [field, operator, expected] = [
-    condition.field,
-    condition.operator,
-    condition.expected
-  ];
+  const field = condition.field;
+  const operator = condition.operator;
+  const expected = condition.expected;
 
   // Support nested fields like Extra.RemoteAddress
   const value = field.includes(".")
@@ -31,7 +30,10 @@ function evaluateCondition(event, condition) {
       return Array.isArray(expected) && !expected.includes(value);
 
     case "contains":
-      return typeof value === "string" && value.toLowerCase().includes(String(expected).toLowerCase());
+      return (
+        typeof value === "string" &&
+        value.toLowerCase().includes(String(expected).toLowerCase())
+      );
 
     case "regex":
       return new RegExp(expected, "i").test(value || "");
@@ -72,13 +74,19 @@ export function evaluateRules(event) {
   if (!type || !rulesByType[type]) return { score, reasons };
 
   for (const rule of rulesByType[type]) {
+    // Allow disabling noisy rules
+    if (rule.enabled === false) continue;
+
     const matched =
-      (rule.check && rule.check(event)) ||
-      evaluateConditions(event, rule.conditions);
+      (typeof rule.check === "function" && rule.check(event)) ||
+      (rule.conditions && evaluateConditions(event, rule.conditions));
 
     if (!matched) continue;
 
-    const severityScore = BASE_SEVERITY[rule.severity.toLowerCase()] || 20;
+    const severityKey = (rule.severity || "medium").toLowerCase();
+    const severityScore = BASE_SEVERITY[severityKey] ?? BASE_SEVERITY.medium;
+
+    // weight is a small fine-tuning factor, e.g. -2 .. +3
     const weightedScore = severityScore + (rule.weight || 0);
 
     score += weightedScore;
@@ -90,7 +98,7 @@ export function evaluateRules(event) {
       mitre: rule.mitre || "N/A",
       score: weightedScore,
       matchedConditions: rule.conditions || null,
-      reason: rule.reason(event)
+      reason: typeof rule.reason === "function" ? rule.reason(event) : rule.reason
     });
   }
 
