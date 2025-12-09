@@ -28,13 +28,10 @@ export const LogsProvider =({children})=>{
     const [anomalyFilterType,setAnomalyFilterType] = useState("All Logs");
     const [anomalySearchQuery,setAnomalySearchQuery]=useState("");
 
-    // websocket in a ref to use across 
     const wsRef = useRef(null);
-    // filtering logic
     const filteredAnomalies = useMemo(() => {
       let result = anomalyData;
 
-      // --- Severity Filter ---
       if (anomalyFilterType === "Low") {
         result = result.filter(log => log.severity?.toLowerCase() === "low");
       } 
@@ -48,7 +45,6 @@ export const LogsProvider =({children})=>{
         result = result.filter(log => log.severity?.toLowerCase() === "critical");
       }
 
-    // --- Process Search Filter (FIXED) ---
     if (anomalySearchQuery.trim() !== "") {
       const query = anomalySearchQuery.toLowerCase();
 
@@ -106,7 +102,6 @@ export const LogsProvider =({children})=>{
       return result;
     },[networkLogs,networkFilterType,networkSearchQuery])
 
-    // websocket useEffect
     useEffect(() => {
     const ws = new WebSocket("ws://localhost:8080");
     wsRef.current=ws;

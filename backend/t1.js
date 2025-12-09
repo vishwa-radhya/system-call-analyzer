@@ -200,7 +200,6 @@ function build(targetlog){
 // build({"Timestamp":"2025-08-23T19:08:27.9766333+05:30","EventType":"ProcessStart","ProcessName":"git","Pid":19992,"FilePath":null,"Extra":{"ParentPid":17912,"ImageFileName":"git.exe"}})
 function buildLogMap(data,targetLog){
     const logMap = new Map();
-    // Pre-process data for efficient lookup
     for (const log of data) {
         if (!logMap.has(log.Pid)) {
             logMap.set(log.Pid, {
@@ -218,9 +217,7 @@ function buildLogMap(data,targetLog){
     const getChildren = (pid) => {
         const children = [];
         for (const log of data) {
-            // Check if the current log is a child of the target pid
             if (log.Extra?.ParentPid === pid) {
-                // Ensure the child's start event is within the parent's start and stop
                 const parentNode = logMap.get(pid);
                 const parentStart = parentNode.start?.Timestamp;
                 const parentStop = parentNode.stop?.Timestamp;
@@ -237,9 +234,7 @@ function buildLogMap(data,targetLog){
         if (!targetLog) return null;
         const pid = targetLog.Pid;
         const node = logMap.get(pid);
-        // Find children within the parent's timeline
         const children = getChildren(pid);
-        // Recursively build children nodes
         for (const child of children) {
             const childNode = buildTree(child);
             if (childNode) {
