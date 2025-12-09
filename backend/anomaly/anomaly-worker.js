@@ -1,4 +1,3 @@
-// anomaly-worker.js
 import { parentPort } from "worker_threads";
 import { evaluateRules } from "./rule-engine.js";
 import { evaluateBehavior, applyScoreDecay } from "./behavior-engine-25.js"; 
@@ -9,10 +8,6 @@ import {
   SEVERITY_THRESHOLDS
 } from "./config.js";
 
-
-// ==========================================================
-//  SEVERITY MAPPING (0–12 scale)
-// ==========================================================
 function calculateSeverity(score) {
   if (score <= SEVERITY_THRESHOLDS.Low)     return "Normal";
   if (score <= SEVERITY_THRESHOLDS.Medium)  return "Low";
@@ -21,49 +16,32 @@ function calculateSeverity(score) {
   return "Critical";
 }
 
-
-// ==========================================================
-//  SCORE FUSION — SIMPLE, INTERPRETABLE (0–12)
-// ==========================================================
 function fuseScores(ruleScore, behaviorScore) {
   const raw = ruleScore + behaviorScore;
   return Math.min(12, Math.floor(raw));
 }
 
-
-// ==========================================================
-//  REASON MERGING (sorted by score desc)
-// ==========================================================
 function mergeReasons(ruleReasons, behReasons) {
   const merged = [...(ruleReasons || []), ...(behReasons || [])];
   merged.sort((a, b) => (b.score || 0) - (a.score || 0));
   return merged;
 }
 
-
-// ==========================================================
-//  PERIODIC BEHAVIOR DECAY
-// ==========================================================
 setInterval(() => applyScoreDecay(SCORE_DECAY_RATE), SCORE_DECAY_INTERVAL);
 
 
-// ======================================================================================
-//  BATCHING SYSTEM
-// ======================================================================================
 const BATCH_WINDOW_MS = 900;
 const SCORE_SIMILARITY = 0.15;
 
 let currentBatch = null;
 
 function vectorsSimilar(a, b) {
-  // These fields exist in vector object
   const keys = ["spawn", "net", "file", "div", "burst", "corr"];
 
   // Detect spawn-only pattern (no file, no net, no corr)
   const aSpawnOnly = (a.net === 0 && a.file === 0 && a.corr === 0);
   const bSpawnOnly = (b.net === 0 && b.file === 0 && b.corr === 0);
 
-  // Wider tolerance for spawn-only bursts (very common small fluctuations)
   const threshold = (aSpawnOnly && bSpawnOnly)
     ? 0.35     // can handle spawn=0.5,0.67,0.83,1.00
     : 0.15;    // strict for multi-signal anomalies
@@ -94,7 +72,7 @@ function flushBatch() {
     startTime: new Date(currentBatch.start).toISOString(),
     endTime: new Date(currentBatch.last).toISOString(),
     durationMs: currentBatch.last - currentBatch.start,
-    reasons: currentBatch.reasons, // pick best from first event
+    reasons: currentBatch.reasons,
   });
 
   currentBatch = null;
@@ -110,7 +88,6 @@ function addToBatch(process, severity, vector, reasons) {
     now - currentBatch.last > BATCH_WINDOW_MS ||
     !vectorsSimilar(currentBatch.refVector, vector)
   ) {
-    // flush old batch
     flushBatch();
 
     // start new batch
@@ -135,7 +112,6 @@ function addToBatch(process, severity, vector, reasons) {
       currentBatch.sum[k] += vector[k];
     }
 
-    // severity escalation rule
     const order = ["Normal", "Low", "Medium", "High", "Critical"];
     if (order.indexOf(severity) > order.indexOf(currentBatch.maxSeverity)) {
       currentBatch.maxSeverity = severity;
@@ -143,54 +119,26 @@ function addToBatch(process, severity, vector, reasons) {
   }
 }
 
-
-
-// ======================================================================================
-//  MAIN WORKER HANDLER
-// ======================================================================================
 parentPort.on("message", (event) => {
   try {
     if (!event?.EventType || !event?.ProcessName) return;
-
-    // ------------------------------------------------------
-    // 1. Evaluate engines
-    // ------------------------------------------------------
     const ruleResult = evaluateRules(event);
     const behaviorResult = evaluateBehavior(event);
 
     const ruleScore = ruleResult.score || 0;
     const behaviorScore = behaviorResult.score || 0;
 
-    // Skip non-anomalous behaviors early
     if (ruleScore === 0 && behaviorScore === 0) return;
-
-    // ------------------------------------------------------
-    // 2. Fuse scores
-    // ------------------------------------------------------
     const fusedScore = fuseScores(ruleScore, behaviorScore);
-
     if (fusedScore < MIN_ANOMALY_SCORE) return;
-
-    // ------------------------------------------------------
-    // 3. Severity
-    // ------------------------------------------------------
     const severity = calculateSeverity(fusedScore);
-
-    // ------------------------------------------------------
-    // 4. Combine explanations
-    // ------------------------------------------------------
     const reasons = mergeReasons(
       ruleResult.reasons,
       behaviorResult.reasons
     );
-
     const vector = behaviorResult?.reasons?.[0]?.vector || {
       spawn: 0, net: 0, file: 0, div: 0, burst: 0, corr: 0
     };
-
-    // ------------------------------------------------------
-    // 5. Batch the anomaly
-    // ------------------------------------------------------
     addToBatch(event.ProcessName, severity, vector, reasons);
 
   } catch (err) {
@@ -198,8 +146,4 @@ parentPort.on("message", (event) => {
   }
 });
 
-
-// ==========================================================
-//  PERIODIC BATCH FLUSH (every 300ms)
-// ==========================================================
 setInterval(flushBatch, 300);

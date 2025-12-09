@@ -33,14 +33,13 @@ class Program
         {
             Console.WriteLine($"EventTypes: {string.Join(",", f.EventTypes ?? new List<string>())}");
         }
-        // Open log stream for appending JSONL
+        // open log stream for appending JSONL
         logStream = new StreamWriter(new FileStream(logFile, FileMode.Append, FileAccess.Write, FileShare.ReadWrite)) { AutoFlush = true };
-        // Start ETW session
+        // start ETW session
         using (var session = new TraceEventSession("SysWatchSession"))
         {
             session.EnableKernelProvider(KernelTraceEventParser.Keywords.Process | KernelTraceEventParser.Keywords.FileIO | KernelTraceEventParser.Keywords.FileIOInit | KernelTraceEventParser.Keywords.NetworkTCPIP);
 
-            // Process start event
             session.Source.Kernel.ProcessStart += data =>
             {
                 if (_isPaused) return;
@@ -64,7 +63,6 @@ class Program
                 }
             };
 
-            // Process Stop Event
             session.Source.Kernel.ProcessStop += data =>
             {
                 if (_isPaused) return;
@@ -84,7 +82,7 @@ class Program
                 }
                 pidNameMap.Remove(data.ProcessID);
             };
-            // Nwtwork Connect Event
+            
             session.Source.Kernel.TcpIpConnect += data =>
             {
                 var record = new SysEvent
@@ -108,7 +106,7 @@ class Program
                     WriteJsonRecord(logStream!, record);
                 }
             };
-            // Network Disconnect Event
+            
             session.Source.Kernel.TcpIpDisconnect += data =>
             {
                 var record = new SysEvent
@@ -133,7 +131,6 @@ class Program
                 }
             };
 
-            // File I/O events
             session.Source.Kernel.FileIORead += data =>
             {
                 if (_isPaused) return;

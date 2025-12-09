@@ -76,6 +76,55 @@ const getAiExplanation=async(log)=>{
   }
 }
 
+const getAiAnomalyExplanation = async (anomaly) => {
+  const key = `${anomaly.process}:${anomaly.severity}:${anomaly.count}:${anomaly.reasons?.[0]?.description || ""}`;
+
+  if (explanationCache[key]) {
+    return { cached: true, explanation: explanationCache[key] };
+  }
+
+  const prompt = `
+  You are an expert Windows system anomaly analyst.
+  Explain this anomaly *batch* detected by SysWatch.
+
+  Rules:
+  - Be clear and simple (3-5 sentences)
+  - Explain what this anomaly means for system behavior
+  - Interpret severity (Normal/Low/Medium/High/Critical)
+  - Highlight suspicious signals (spawn/net/file/div/burst/corr)
+  - Suggest recommended next step (investigate, ignore, monitor)
+
+  Return ONLY this JSON (no extra text):
+  {
+    "summary": "one-line description of the anomaly",
+    "severityInsight": "interpretation of severity and what triggered it",
+    "behaviorDetails": "explain avgScores and what they indicate",
+    "interpretation": "what this anomaly says about the process behavior",
+    "nextStep": "recommendation for the user/admin"
+  }
+  Here is the anomaly batch:
+  ${JSON.stringify(anomaly, null, 2)}
+  `;
+
+  try {
+    const response = await googleAi.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+    });
+
+    const cleaned = response.text.trim().replace(/```json\n?|\n?```/g, "");
+    const explanation = JSON.parse(cleaned);
+
+    explanationCache[key] = explanation;
+    fs.writeFileSync(cacheFile, JSON.stringify(explanationCache, null, 2));
+    return { cached: false, explanation };
+  } catch (err) {
+    console.error(err);
+    return { error: "AI anomaly explanation failed" };
+  }
+};
+
+
 app.post("/ai_explanation",async(req,res)=>{
   try{
     const log = req.body.log;
@@ -89,6 +138,22 @@ app.post("/ai_explanation",async(req,res)=>{
     res.status(500).json({error:"Ai explanation failed"});
   }
 })
+
+app.post("/ai_anomaly_explanation", async (req, res) => {
+  try {
+    const anomaly = req.body.anomaly;
+    if (!anomaly) {
+      return res.status(400).json({ error: "anomaly object required" });
+    }
+
+    const data = await getAiAnomalyExplanation(anomaly);
+    res.json(data);
+  } catch (e) {
+    console.error("AI anomaly explanation error:", e);
+    res.status(500).json({ error: "AI Anomaly explanation failed" });
+  }
+});
+
 
 app.get("/process-tree",async(req,res)=>{
   let targetLog;
@@ -115,7 +180,7 @@ app.get("/process-tree",async(req,res)=>{
   }
     function buildLogMap(data,targetLog){
       const logMap = new Map();
-      // Pre-process data for efficient lookup
+      // data pre processing for efficient lookup
       for (const log of data) {
           if (!logMap.has(log.Pid)) {
               logMap.set(log.Pid, {
@@ -133,7 +198,7 @@ app.get("/process-tree",async(req,res)=>{
       const getChildren = (pid) => {
           const children = [];
           for (const log of data) {
-              if (log.Extra?.ParentPid === pid) { // Check if the current log is a child of the target pid
+              if (log.Extra?.ParentPid === pid) { // check if the current log is a child of the target pid
                   const parentNode = logMap.get(pid); 
                   const parentStart = parentNode.start?.Timestamp;
                   const parentStop = parentNode.stop?.Timestamp;
@@ -150,8 +215,8 @@ app.get("/process-tree",async(req,res)=>{
           if (!targetLog) return null;
           const pid = targetLog.Pid;
           const node = logMap.get(pid);
-          const children = getChildren(pid);  // Find children within the parent's timeline
-          for (const child of children) { // Recursively build children nodes
+          const children = getChildren(pid);  // find children within the parent's timeline
+          for (const child of children) { // recursively build children nodes
               const childNode = buildTree(child);
               if (childNode) {
                   node.children.push(childNode);

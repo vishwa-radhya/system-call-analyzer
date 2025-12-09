@@ -1,9 +1,9 @@
 import { Fragment } from "react";
 import OptionButton from "./option-button.component";
-import { Trash } from "lucide-react";
+import { LayoutPanelLeft, Trash, X } from "lucide-react";
 import { useLogsContext } from "../contexts/logs-context.context";
 
-const AnamolyControlOptions = () => {
+const AnamolyControlOptions = ({isAnomalyAnalyzerOpen,setIsAnomalyAnalyzerOpen}) => {
     const {handleClearAnomalyData}=useLogsContext();
     const handleClearAnomalyLogs=()=>{
         handleClearAnomalyData();
@@ -11,6 +11,7 @@ const AnamolyControlOptions = () => {
     return ( 
         <Fragment>
             <OptionButton Icon={Trash} text='Clear' handleClick={handleClearAnomalyLogs} />
+            <OptionButton Icon={isAnomalyAnalyzerOpen ? X : LayoutPanelLeft} text={'Anomaly analyzer'} handleClick={()=>setIsAnomalyAnalyzerOpen(!isAnomalyAnalyzerOpen)} />
         </Fragment>
      );
 }

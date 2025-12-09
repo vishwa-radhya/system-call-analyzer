@@ -1,7 +1,5 @@
-// rule-engine.js (updated)
 import { rulesByType } from "./rules.js";
 
-// Normalized base severity scores (small, fusion-friendly)
 const BASE_SEVERITY = { 
   low: 2,
   medium: 5,
@@ -14,7 +12,6 @@ function evaluateCondition(event, condition) {
   const operator = condition.operator;
   const expected = condition.expected;
 
-  // Support nested fields like Extra.RemoteAddress
   const value = field.includes(".")
     ? field.split(".").reduce((obj, key) => obj?.[key], event)
     : event[field];
@@ -46,9 +43,6 @@ function evaluateCondition(event, condition) {
   }
 }
 
-/* ----------------------------------------
-   AND / OR Condition Handler for Rules
------------------------------------------*/
 function evaluateConditions(event, conditions = {}) {
   if (conditions.all) {
     return conditions.all.every(c => evaluateCondition(event, c));
@@ -74,7 +68,7 @@ export function evaluateRules(event) {
   if (!type || !rulesByType[type]) return { score, reasons };
 
   for (const rule of rulesByType[type]) {
-    // Allow disabling noisy rules
+    // allow disabling noisy rules
     if (rule.enabled === false) continue;
 
     const matched =

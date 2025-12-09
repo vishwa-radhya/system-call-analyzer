@@ -1,5 +1,3 @@
-// behavior-engine.v3 — noise-aware, compact scoring
-
 const processStats = new Map();
 
 const KNOWN_NOISY = [

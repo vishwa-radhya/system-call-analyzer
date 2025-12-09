@@ -62,17 +62,18 @@ export default function AnomalyDensityAreaChart({ anomalies=[] }) {
     const countsByMinute = {};
 
     anomalies.forEach((a) => {
-      if (!a?.Log?.Timestamp) return;
-      const ts = new Date(a.Log.Timestamp);
+      if (!a?.timestamp) return;
+
+      const ts = new Date(a.timestamp);
       const label = ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-      countsByMinute[label] = (countsByMinute[label] || 0) + 1;
-    });
+    countsByMinute[label] = (countsByMinute[label] || 0) + 1;
+      });
 
-    return Object.entries(countsByMinute)
-      .map(([time, count]) => ({ time, anomalies: count }))
-      .sort((a, b) => a.time.localeCompare(b.time));
-  }, [anomalies]);
+      return Object.entries(countsByMinute)
+        .map(([time, anomalies]) => ({ time, anomalies }))
+        .sort((a, b) => a.time.localeCompare(b.time));
+    }, [anomalies]);
 
   const hasAny = chartData.some((d) => d.anomalies > 0);
   if (!hasAny) return <EmptyVisualization />;

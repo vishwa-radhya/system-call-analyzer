@@ -54,7 +54,7 @@ const AnomalyTable = ({ anomalyLogs=[], handleLogClick }) => {
             </TableCell>
 
             <TableCell className="px-3 py-2 text-gray-700 break-words whitespace-pre-wrap">
-              {anom.reasons?.[0]?.reason || anom.reasons?.[0] || "—"}
+              {anom.reasons?.[0]?.reason?.split(':')[0] || anom.reasons?.[0] || "—"}
             </TableCell>
           </TableRow>
         ))}
