@@ -1,11 +1,13 @@
 import fs from "fs";
 import path from "path";
 import { WebSocketServer,WebSocket } from "ws";
-import { fileURLToPath } from "url";
+import { fileURLToPath, pathToFileURL } from "url";
 import { Worker } from "worker_threads";
 import { spawn } from "child_process";
 import express from 'express';
 import { GoogleGenAI } from "@google/genai";
+import TailFile from "@logdna/tail-file";
+import split from "split2";
 import dotenv from 'dotenv';
 import cors from 'cors';
 const __filename = fileURLToPath(import.meta.url);
@@ -21,17 +23,11 @@ app.use(
     allowedHeaders: ["Content-Type"],
   })
 );
+
 const googleAi = new GoogleGenAI({apiKey:process.env.GOOGLE_GEMINI_API_KEY});
-// cache file
 const cacheFile = path.resolve(__dirname,"../logs/ai_explanations.json");
-
-const historyBuffer = [];
-const MAX_HISTORY=100;
-let position = 0;
-let buffer = "";
-let activeClient=null;
-
 let explanationCache={}
+
 if(fs.existsSync(cacheFile)){
   try{
     explanationCache=JSON.parse(fs.readFileSync(cacheFile,"utf-8"));
@@ -64,7 +60,7 @@ const getAiExplanation=async(log)=>{
   `
   try{
     const response = await googleAi.models.generateContent({
-      model:'gemini-2.0-flash',
+      model:'gemini-2.5-flash',
       contents:prompt
     })
     const explanationText = response.text.trim();
@@ -80,6 +76,55 @@ const getAiExplanation=async(log)=>{
   }
 }
 
+const getAiAnomalyExplanation = async (anomaly) => {
+  const key = `${anomaly.process}:${anomaly.severity}:${anomaly.count}:${anomaly.reasons?.[0]?.description || ""}`;
+
+  if (explanationCache[key]) {
+    return { cached: true, explanation: explanationCache[key] };
+  }
+
+  const prompt = `
+  You are an expert Windows system anomaly analyst.
+  Explain this anomaly *batch* detected by SysWatch.
+
+  Rules:
+  - Be clear and simple (3-5 sentences)
+  - Explain what this anomaly means for system behavior
+  - Interpret severity (Normal/Low/Medium/High/Critical)
+  - Highlight suspicious signals (spawn/net/file/div/burst/corr)
+  - Suggest recommended next step (investigate, ignore, monitor)
+
+  Return ONLY this JSON (no extra text):
+  {
+    "summary": "one-line description of the anomaly",
+    "severityInsight": "interpretation of severity and what triggered it",
+    "behaviorDetails": "explain avgScores and what they indicate",
+    "interpretation": "what this anomaly says about the process behavior",
+    "nextStep": "recommendation for the user/admin"
+  }
+  Here is the anomaly batch:
+  ${JSON.stringify(anomaly, null, 2)}
+  `;
+
+  try {
+    const response = await googleAi.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+    });
+
+    const cleaned = response.text.trim().replace(/```json\n?|\n?```/g, "");
+    const explanation = JSON.parse(cleaned);
+
+    explanationCache[key] = explanation;
+    fs.writeFileSync(cacheFile, JSON.stringify(explanationCache, null, 2));
+    return { cached: false, explanation };
+  } catch (err) {
+    console.error(err);
+    return { error: "AI anomaly explanation failed" };
+  }
+};
+
+
 app.post("/ai_explanation",async(req,res)=>{
   try{
     const log = req.body.log;
@@ -93,6 +138,22 @@ app.post("/ai_explanation",async(req,res)=>{
     res.status(500).json({error:"Ai explanation failed"});
   }
 })
+
+app.post("/ai_anomaly_explanation", async (req, res) => {
+  try {
+    const anomaly = req.body.anomaly;
+    if (!anomaly) {
+      return res.status(400).json({ error: "anomaly object required" });
+    }
+
+    const data = await getAiAnomalyExplanation(anomaly);
+    res.json(data);
+  } catch (e) {
+    console.error("AI anomaly explanation error:", e);
+    res.status(500).json({ error: "AI Anomaly explanation failed" });
+  }
+});
+
 
 app.get("/process-tree",async(req,res)=>{
   let targetLog;
@@ -119,7 +180,7 @@ app.get("/process-tree",async(req,res)=>{
   }
     function buildLogMap(data,targetLog){
       const logMap = new Map();
-      // Pre-process data for efficient lookup
+      // data pre processing for efficient lookup
       for (const log of data) {
           if (!logMap.has(log.Pid)) {
               logMap.set(log.Pid, {
@@ -137,10 +198,8 @@ app.get("/process-tree",async(req,res)=>{
       const getChildren = (pid) => {
           const children = [];
           for (const log of data) {
-              // Check if the current log is a child of the target pid
-              if (log.Extra?.ParentPid === pid) {
-                  // Ensure the child's start event is within the parent's start and stop
-                  const parentNode = logMap.get(pid);
+              if (log.Extra?.ParentPid === pid) { // check if the current log is a child of the target pid
+                  const parentNode = logMap.get(pid); 
                   const parentStart = parentNode.start?.Timestamp;
                   const parentStop = parentNode.stop?.Timestamp;
 
@@ -156,16 +215,13 @@ app.get("/process-tree",async(req,res)=>{
           if (!targetLog) return null;
           const pid = targetLog.Pid;
           const node = logMap.get(pid);
-          // Find children within the parent's timeline
-          const children = getChildren(pid);
-          // Recursively build children nodes
-          for (const child of children) {
+          const children = getChildren(pid);  // find children within the parent's timeline
+          for (const child of children) { // recursively build children nodes
               const childNode = buildTree(child);
               if (childNode) {
                   node.children.push(childNode);
               }
           }
-          
           return node;
       }
       const finalNode= buildTree(targetLog);
@@ -185,16 +241,37 @@ app.get("/process-tree",async(req,res)=>{
 
 const logFilePath = path.resolve(__dirname, "../logs/SysWatch.jsonl");
 const wss = new WebSocketServer({port:8080});
-const anomalyWorker = new Worker(path.resolve('./anomaly-worker.js'));
+const workerPath = path.resolve(__dirname, './anomaly/anomaly-worker.js');
+const workerUrl = pathToFileURL(workerPath);
+console.log("Worker path:", workerPath);
+const anomalyWorker = new Worker(workerUrl);
 console.log("WebSocket server running on ws://localhost:8080");
 
+const historyBuffer = [];
+const MAX_HISTORY=100;
+let activeClient=null;
+let tail = null;
+
+
 anomalyWorker.on('message',(msg)=>{
-  if(msg.anomalies && activeClient?.readyState === WebSocket.OPEN){
-    for(const anomaly of msg.anomalies){
-      activeClient.send(JSON.stringify({type:"anomaly",data:anomaly}));
-    }
+  if(activeClient?.readyState === WebSocket.OPEN){
+    activeClient.send(
+      JSON.stringify({
+        type:"anomaly",
+        data:msg
+      })
+    )
   }
+  // console.log('anomaly message: ',msg.severity,msg.process,msg.type,msg.count,msg.durationMs)
 })
+
+anomalyWorker.on('error', (error) => {
+  console.error('Worker error:', error);
+});
+
+anomalyWorker.on('exit', (code) => {
+  console.log(`Worker exited with code ${code}`);
+});
 
 const dotnetProcess=spawn("dotnet",["run"],{
   cwd:path.resolve(__dirname,"../SysWatchETW"),
@@ -221,45 +298,33 @@ function addToHistory(log){
 }
 
 function resetTailPosition(){
-  position=0;
-  buffer="";
-}
-
-async function readNewLines(filePath,onLine){
-  try {
-    const stats = await fs.promises.stat(filePath);
-
-    if (stats.size > position) {
-      const fd = await fs.promises.open(filePath, "r");
-      const { bytesRead, buffer: chunk } = await fd.read({
-        buffer: Buffer.alloc(stats.size - position),
-        position,
-      });
-      await fd.close();
-
-      position += bytesRead;
-      buffer += chunk.toString("utf8");
-
-      const lines = buffer.split("\n");
-      buffer = lines.pop() || ""; // keep partial line
-
-      for (const line of lines) {
-        if (!line.trim()) continue;
-        try {
-          onLine(JSON.parse(line));
-        } catch {
-          console.error("Failed to parse line:", line);
-        }
-      }
-    }
-  } catch (err) {
-    console.log("Waiting for log file...", err.message);
+  if(tail){
+    try { tail.quit(); } catch {}
+    tail = null;
   }
 }
 
+function tailFile(filePath, onLine) {
+  if(tail){
+    try{tail.quit();} catch {}
+  }
+  tail = new TailFile(filePath,{
+    startPos:0,
+    retryTimeout:100,
+  })
+  tail.pipe(split()).on('data',line=>{
+    if(!line.trim()) return;
+    try{
+      const json = JSON.parse(line);
+      onLine(json);
+    }catch(err){
+      console.error('Failed to parse JSON:',line)
+    }
+  }).on('error',err=>{
+    console.error('TailFile error:',err);
+  });
 
-function tailFile(filePath, onLine,interval=500) {
-  setInterval(()=>readNewLines(filePath,onLine),interval);
+  tail.start().catch(err=>console.error("Tail start failed:",err))
 }
 
 async function handleControlMessage(ws,data,dotnetProcess,logFilePath){
@@ -281,6 +346,10 @@ async function handleControlMessage(ws,data,dotnetProcess,logFilePath){
           await fs.promises.truncate(logFilePath, 0);
           console.log("Logs cleared");
           resetTailPosition();
+          // restart tailer fresh
+          setTimeout(()=>{
+            tailFile(logFilePath,onLineRef)
+          },150)
           ws.send(JSON.stringify({ type: "ACK", action: "CLEAR_LOGS" }));
           setTimeout(() => {
             dotnetProcess.stdin.write("START\n");
@@ -313,13 +382,20 @@ function setupWebSocketServer(wss,logFilePath,dotnetProcess){
       type:"history",
       data:historyBuffer
     }));
-    tailFile(logFilePath, (jsonLine) => {
+
+    const onLine = (jsonLine)=>{
       addToHistory(jsonLine);
       if (activeClient?.readyState === ws.OPEN) {
-        activeClient.send(JSON.stringify({type:"log",data:jsonLine}));
+        activeClient.send(JSON.stringify({
+          type: "log",
+          data: jsonLine
+        }));
       }
       anomalyWorker.postMessage(jsonLine);
-    });
+    }
+    global.onLineRef=onLine;
+    tailFile(logFilePath,onLine)
+    
     ws.on("message", (msg) => {
       try {
         const data = JSON.parse(msg.toString().trim());

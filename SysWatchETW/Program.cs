@@ -4,12 +4,11 @@ using Microsoft.Diagnostics.Tracing.Session;
 class Program
 {
     static Dictionary<int, string> pidNameMap = new();
-    static bool _isPaused = false; // control flag
+    static bool _isPaused = false; 
     static StreamWriter? logStream;
     static void Main(string[] args)
     {
-        //ensuring stdout uses UTF-8 and flushes immediately
-        Console.OutputEncoding = System.Text.Encoding.UTF8;
+        Console.OutputEncoding = System.Text.Encoding.UTF8; //ensuring stdout uses UTF-8 and flushes immediately
         Console.WriteLine("[SysWatch] Initialized");
         Console.Out.Flush();
         //admin check
@@ -34,14 +33,13 @@ class Program
         {
             Console.WriteLine($"EventTypes: {string.Join(",", f.EventTypes ?? new List<string>())}");
         }
-        // Open log stream for appending JSONL
+        // open log stream for appending JSONL
         logStream = new StreamWriter(new FileStream(logFile, FileMode.Append, FileAccess.Write, FileShare.ReadWrite)) { AutoFlush = true };
-        // Start ETW session
+        // start ETW session
         using (var session = new TraceEventSession("SysWatchSession"))
         {
             session.EnableKernelProvider(KernelTraceEventParser.Keywords.Process | KernelTraceEventParser.Keywords.FileIO | KernelTraceEventParser.Keywords.FileIOInit | KernelTraceEventParser.Keywords.NetworkTCPIP);
 
-            // Process start event
             session.Source.Kernel.ProcessStart += data =>
             {
                 if (_isPaused) return;
@@ -65,7 +63,6 @@ class Program
                 }
             };
 
-            // Process Stop Event
             session.Source.Kernel.ProcessStop += data =>
             {
                 if (_isPaused) return;
@@ -85,7 +82,7 @@ class Program
                 }
                 pidNameMap.Remove(data.ProcessID);
             };
-            // Nwtwork Connect Event
+            
             session.Source.Kernel.TcpIpConnect += data =>
             {
                 var record = new SysEvent
@@ -109,7 +106,7 @@ class Program
                     WriteJsonRecord(logStream!, record);
                 }
             };
-            // Network Disconnect Event
+            
             session.Source.Kernel.TcpIpDisconnect += data =>
             {
                 var record = new SysEvent
@@ -134,7 +131,6 @@ class Program
                 }
             };
 
-            // File I/O events
             session.Source.Kernel.FileIORead += data =>
             {
                 if (_isPaused) return;
@@ -147,6 +143,26 @@ class Program
                     Pid = data.ProcessID,
                     FilePath = data.FileName
                 };
+                if (PassesFilters(record, filters))
+                {
+                    WriteJsonRecord(logStream!, record);
+                }
+            };
+
+            session.Source.Kernel.FileIOCreate += data =>
+            {
+                if (_isPaused) return;
+                if (string.IsNullOrEmpty(data.FileName)) return;
+
+                var record = new SysEvent
+                {
+                    Timestamp = data.TimeStamp,
+                    EventType = "FileCreate",
+                    ProcessName = data.ProcessName,
+                    Pid = data.ProcessID,
+                    FilePath = data.FileName
+                };
+
                 if (PassesFilters(record, filters))
                 {
                     WriteJsonRecord(logStream!, record);
@@ -189,7 +205,7 @@ class Program
                 }
             };
 
-            session.Source.Process(); // blocks and streams ETW events
+            session.Source.Process(); 
         }
     }
     static void ListenForComands()
@@ -235,7 +251,7 @@ class Program
     }
     static void WriteJsonRecord(StreamWriter logStream, SysEvent record)
     {
-        if (_isPaused || logStream == null) return; // skip if paused or closed
+        if (_isPaused || logStream == null) return; 
         try
         {
             string json = JsonSerializer.Serialize(record);
@@ -267,9 +283,8 @@ class Program
     static bool PassesFilters(SysEvent record, List<FilterRule> filters)
     {
         if (filters.Count == 0)
-            return true; // no filters = log everything
-        var filter = filters[0]; // we only have one filter object in filters.json
-        // Event type filter (applies to all events)
+            return true; 
+        var filter = filters[0]; 
         if (filter.EventTypes != null && filter.EventTypes.Count > 0 &&
             !filter.EventTypes.Contains(record.EventType, StringComparer.OrdinalIgnoreCase))
             return false;
