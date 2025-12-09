@@ -4,7 +4,7 @@ using Microsoft.Diagnostics.Tracing.Session;
 class Program
 {
     static Dictionary<int, string> pidNameMap = new();
-    static bool _isPaused = false; // control flag
+    static bool _isPaused = false; 
     static StreamWriter? logStream;
     static void Main(string[] args)
     {
@@ -152,6 +152,26 @@ class Program
                 }
             };
 
+            session.Source.Kernel.FileIOCreate += data =>
+            {
+                if (_isPaused) return;
+                if (string.IsNullOrEmpty(data.FileName)) return;
+
+                var record = new SysEvent
+                {
+                    Timestamp = data.TimeStamp,
+                    EventType = "FileCreate",
+                    ProcessName = data.ProcessName,
+                    Pid = data.ProcessID,
+                    FilePath = data.FileName
+                };
+
+                if (PassesFilters(record, filters))
+                {
+                    WriteJsonRecord(logStream!, record);
+                }
+            };
+
             session.Source.Kernel.FileIOWrite += data =>
             {
                 if (_isPaused) return;
@@ -188,7 +208,7 @@ class Program
                 }
             };
 
-            session.Source.Process(); // blocks and streams ETW events
+            session.Source.Process(); 
         }
     }
     static void ListenForComands()
@@ -234,7 +254,7 @@ class Program
     }
     static void WriteJsonRecord(StreamWriter logStream, SysEvent record)
     {
-        if (_isPaused || logStream == null) return; // skip if paused or closed
+        if (_isPaused || logStream == null) return; 
         try
         {
             string json = JsonSerializer.Serialize(record);
@@ -266,9 +286,8 @@ class Program
     static bool PassesFilters(SysEvent record, List<FilterRule> filters)
     {
         if (filters.Count == 0)
-            return true; // no filters = log everything
-        var filter = filters[0]; // we only have one filter object in filters.json
-        // Event type filter (applies to all events)
+            return true; 
+        var filter = filters[0]; 
         if (filter.EventTypes != null && filter.EventTypes.Count > 0 &&
             !filter.EventTypes.Contains(record.EventType, StringComparer.OrdinalIgnoreCase))
             return false;

@@ -36,9 +36,7 @@ function fuseScores(ruleScore, behaviorScore) {
 // ==========================================================
 function mergeReasons(ruleReasons, behReasons) {
   const merged = [...(ruleReasons || []), ...(behReasons || [])];
-
   merged.sort((a, b) => (b.score || 0) - (a.score || 0));
-
   return merged;
 }
 
@@ -49,62 +47,159 @@ function mergeReasons(ruleReasons, behReasons) {
 setInterval(() => applyScoreDecay(SCORE_DECAY_RATE), SCORE_DECAY_INTERVAL);
 
 
-// ==========================================================
+// ======================================================================================
+//  BATCHING SYSTEM
+// ======================================================================================
+const BATCH_WINDOW_MS = 900;
+const SCORE_SIMILARITY = 0.15;
+
+let currentBatch = null;
+
+function vectorsSimilar(a, b) {
+  // These fields exist in vector object
+  const keys = ["spawn", "net", "file", "div", "burst", "corr"];
+
+  // Detect spawn-only pattern (no file, no net, no corr)
+  const aSpawnOnly = (a.net === 0 && a.file === 0 && a.corr === 0);
+  const bSpawnOnly = (b.net === 0 && b.file === 0 && b.corr === 0);
+
+  // Wider tolerance for spawn-only bursts (very common small fluctuations)
+  const threshold = (aSpawnOnly && bSpawnOnly)
+    ? 0.35     // can handle spawn=0.5,0.67,0.83,1.00
+    : 0.15;    // strict for multi-signal anomalies
+
+  return keys.every(k => Math.abs(a[k] - b[k]) < threshold);
+}
+
+
+function flushBatch() {
+  if (!currentBatch) return;
+
+  const avg = {};
+  const keys = ["spawn","net","file","div","burst","corr"];
+
+  // compute averages
+  for (const k of keys) {
+    avg[k] = currentBatch.sum[k] / currentBatch.count;
+  }
+
+  parentPort.postMessage({
+    type: "anomalyBatch",
+    timestamp: new Date().toISOString(),
+    process: currentBatch.process,
+    severity: currentBatch.maxSeverity,
+    count: currentBatch.count,
+
+    avgScores: avg,
+    startTime: new Date(currentBatch.start).toISOString(),
+    endTime: new Date(currentBatch.last).toISOString(),
+    durationMs: currentBatch.last - currentBatch.start,
+    reasons: currentBatch.reasons, // pick best from first event
+  });
+
+  currentBatch = null;
+}
+
+function addToBatch(process, severity, vector, reasons) {
+  const now = Date.now();
+
+  if (
+    !currentBatch ||
+    currentBatch.process !== process ||
+    currentBatch.severity !== severity ||
+    now - currentBatch.last > BATCH_WINDOW_MS ||
+    !vectorsSimilar(currentBatch.refVector, vector)
+  ) {
+    // flush old batch
+    flushBatch();
+
+    // start new batch
+    currentBatch = {
+      process,
+      severity,
+      start: now,
+      last: now,
+      count: 1,
+      sum: { ...vector },
+      refVector: { ...vector },
+      reasons,
+      maxSeverity:severity
+    };
+  } else {
+    // add into existing batch
+    currentBatch.count++;
+    currentBatch.last = now;
+
+    // accumulate scores
+    for (const k in vector) {
+      currentBatch.sum[k] += vector[k];
+    }
+
+    // severity escalation rule
+    const order = ["Normal", "Low", "Medium", "High", "Critical"];
+    if (order.indexOf(severity) > order.indexOf(currentBatch.maxSeverity)) {
+      currentBatch.maxSeverity = severity;
+    }
+  }
+}
+
+
+
+// ======================================================================================
 //  MAIN WORKER HANDLER
-// ==========================================================
+// ======================================================================================
 parentPort.on("message", (event) => {
   try {
-    // guard
     if (!event?.EventType || !event?.ProcessName) return;
 
-    // ---------------------------------------------
-    // 1. Run detection engines
-    // ---------------------------------------------
+    // ------------------------------------------------------
+    // 1. Evaluate engines
+    // ------------------------------------------------------
     const ruleResult = evaluateRules(event);
-    // console.log('rr:',ruleResult)
     const behaviorResult = evaluateBehavior(event);
-    // console.log('br:',behaviorResult)
+
     const ruleScore = ruleResult.score || 0;
     const behaviorScore = behaviorResult.score || 0;
 
-    // ---------------------------------------------
-    // 2. Fuse scores into unified anomaly score
-    // ---------------------------------------------
+    // Skip non-anomalous behaviors early
+    if (ruleScore === 0 && behaviorScore === 0) return;
+
+    // ------------------------------------------------------
+    // 2. Fuse scores
+    // ------------------------------------------------------
     const fusedScore = fuseScores(ruleScore, behaviorScore);
 
-    // ---------------------------------------------
-    // 3. Determine severity
-    // ---------------------------------------------
+    if (fusedScore < MIN_ANOMALY_SCORE) return;
+
+    // ------------------------------------------------------
+    // 3. Severity
+    // ------------------------------------------------------
     const severity = calculateSeverity(fusedScore);
 
-    // ---------------------------------------------
-    // 4. Aggregate explanations
-    // ---------------------------------------------
+    // ------------------------------------------------------
+    // 4. Combine explanations
+    // ------------------------------------------------------
     const reasons = mergeReasons(
       ruleResult.reasons,
       behaviorResult.reasons
     );
-    // console.log('fs:',fusedScore,'severity:',severity)
-    // console.log('reasons:',reasons)
-    // ---------------------------------------------
-    // 5. Emit anomaly (only if meaningful)
-    // ---------------------------------------------
-    if (fusedScore >= MIN_ANOMALY_SCORE) {
-      parentPort.postMessage({
-        timestamp: new Date().toISOString(),
 
-        severity,
-        finalScore: fusedScore,
+    const vector = behaviorResult?.reasons?.[0]?.vector || {
+      spawn: 0, net: 0, file: 0, div: 0, burst: 0, corr: 0
+    };
 
-        ruleScore,
-        behaviorScore,
-
-        reasons,
-        event
-      });
-    }
+    // ------------------------------------------------------
+    // 5. Batch the anomaly
+    // ------------------------------------------------------
+    addToBatch(event.ProcessName, severity, vector, reasons);
 
   } catch (err) {
     console.error("Anomaly worker error:", err);
   }
 });
+
+
+// ==========================================================
+//  PERIODIC BATCH FLUSH (every 300ms)
+// ==========================================================
+setInterval(flushBatch, 300);

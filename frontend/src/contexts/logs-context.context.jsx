@@ -31,20 +31,35 @@ export const LogsProvider =({children})=>{
     // websocket in a ref to use across 
     const wsRef = useRef(null);
     // filtering logic
-    const filteredAnomalies = useMemo(()=>{
+    const filteredAnomalies = useMemo(() => {
       let result = anomalyData;
-      if(anomalyFilterType==="Low"){
-        result = result.filter((log)=>log.Severity==="low")
-      }else if(anomalyFilterType==="Medium"){
-        result=result.filter((log)=>log.Severity==="medium")
-      }else if(anomalyFilterType==="High"){
-        result = result.filter((log)=>log.Severity==="high")
+
+      // --- Severity Filter ---
+      if (anomalyFilterType === "Low") {
+        result = result.filter(log => log.severity?.toLowerCase() === "low");
+      } 
+      else if (anomalyFilterType === "Medium") {
+        result = result.filter(log => log.severity?.toLowerCase() === "medium");
       }
-      if(anomalyFilterType.trim() !== ""){
-        result = result.filter((log)=>log?.Log?.ProcessName.toLowerCase().includes(anomalySearchQuery.toLowerCase()))
+      else if (anomalyFilterType === "High") {
+        result = result.filter(log => log.severity?.toLowerCase() === "high");
       }
-      return result;
-    },[anomalyData,anomalyFilterType,anomalySearchQuery])
+      else if (anomalyFilterType === "Critical") {
+        result = result.filter(log => log.severity?.toLowerCase() === "critical");
+      }
+
+    // --- Process Search Filter (FIXED) ---
+    if (anomalySearchQuery.trim() !== "") {
+      const query = anomalySearchQuery.toLowerCase();
+
+      result = result.filter(log =>
+        log.process?.toLowerCase().includes(query)
+      );
+    }
+
+    return result;
+}, [anomalyData, anomalyFilterType, anomalySearchQuery]);
+
 
     const filteredProcessLogs = useMemo(()=>{
       let result = processLogs;
@@ -123,7 +138,7 @@ export const LogsProvider =({children})=>{
         const handleLog = (log,type) => {
           if(type === "anomaly"){
           setAnomalyData((prev)=>[log,...prev]);
-          setEventCounts((prev)=>({...prev,[log.Severity] : (prev[log.Severity] || 0) + 1}))
+          setEventCounts((prev)=>({...prev,[log.severity] : (prev[log.severity] || 0) + 1}))
         }
         else{
           if(log.EventType==="ProcessStart" || log.EventType==="ProcessStop"){
@@ -175,6 +190,8 @@ export const LogsProvider =({children})=>{
       console.warn("WebSocket not connected, cannot send command");
     }
   }
+
+
 
   const handleSetProcessFilterType=(val)=>{
     setProcessFilterType(val)

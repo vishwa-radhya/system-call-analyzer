@@ -19,6 +19,7 @@ const CONFIG = {
     ProcessStart: 6,
     FileRead: 30,
     FileWrite: 15,
+    FileCreate: 10,
     NetworkConnect: 25
   },
 
@@ -82,11 +83,21 @@ function corr(stats) {
   const e = stats.events;
   const spawn = (e.ProcessStart?.length || 0) > CONFIG.THRESHOLDS.ProcessStart;
   const writes = (e.FileWrite?.length || 0) > CONFIG.THRESHOLDS.FileWrite;
+  const creates = (e.FileCreate?.length || 0) > CONFIG.THRESHOLDS.FileCreate;
   const net = (e.NetworkConnect?.length || 0) > CONFIG.THRESHOLDS.NetworkConnect;
 
-  if (spawn && writes) return 1;     // unpack
-  if (net && writes) return 0.9;    // exfil
-  if (spawn && net) return 0.8;     // beacon
+  // Dropper / unpacker
+  if (spawn && creates) return 1.0;
+
+  // Staged exfiltration (drop + beacon)
+  if (creates && net) return 0.95;
+
+  // Typical exfil
+  if (writes && net) return 0.9;
+
+  // Beacon + spawning
+  if (spawn && net) return 0.8;
+
   return 0;
 }
 
@@ -117,7 +128,7 @@ export function evaluateBehavior(event) {
   const v = {
     spawn: rate(stats, "ProcessStart"),
     net: rate(stats, "NetworkConnect"),
-    file: (rate(stats, "FileRead") + rate(stats, "FileWrite")) / 2,
+    file: (rate(stats, "FileRead") + rate(stats, "FileWrite")+ rate(stats,"FileCreate")) / 3,
     div: diversity(stats),
     burst: burstiness(stats),
     corr: corr(stats)

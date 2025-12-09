@@ -18,6 +18,7 @@
       "FileRead",
       "FileWrite",
       "FileRename",
+      "FileCreate",
       "ProcessStart",
       "ProcessStop"
     ]

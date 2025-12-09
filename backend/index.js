@@ -189,12 +189,15 @@ let tail = null;
 
 
 anomalyWorker.on('message',(msg)=>{
-  // if(msg.anomalies && activeClient?.readyState === WebSocket.OPEN){
-  //   for(const anomaly of msg.anomalies){
-  //     activeClient.send(JSON.stringify({type:"anomaly",data:anomaly}));
-  //   }
-  // }
-  console.log('anomaly message: ',msg.severity,msg.ruleScore,msg.behaviorScore,msg.finalScore,msg.reasons[0].reason)
+  if(activeClient?.readyState === WebSocket.OPEN){
+    activeClient.send(
+      JSON.stringify({
+        type:"anomaly",
+        data:msg
+      })
+    )
+  }
+  // console.log('anomaly message: ',msg.severity,msg.process,msg.type,msg.count,msg.durationMs)
 })
 
 anomalyWorker.on('error', (error) => {
