@@ -6,6 +6,8 @@ import { Worker } from "worker_threads";
 import { spawn } from "child_process";
 import express from 'express';
 import { GoogleGenAI } from "@google/genai";
+import TailFile from "@logdna/tail-file";
+import split from "split2";
 import dotenv from 'dotenv';
 import cors from 'cors';
 const __filename = fileURLToPath(import.meta.url);
@@ -21,17 +23,11 @@ app.use(
     allowedHeaders: ["Content-Type"],
   })
 );
+
 const googleAi = new GoogleGenAI({apiKey:process.env.GOOGLE_GEMINI_API_KEY});
-// cache file
 const cacheFile = path.resolve(__dirname,"../logs/ai_explanations.json");
-
-const historyBuffer = [];
-const MAX_HISTORY=100;
-let position = 0;
-let buffer = "";
-let activeClient=null;
-
 let explanationCache={}
+
 if(fs.existsSync(cacheFile)){
   try{
     explanationCache=JSON.parse(fs.readFileSync(cacheFile,"utf-8"));
@@ -64,7 +60,7 @@ const getAiExplanation=async(log)=>{
   `
   try{
     const response = await googleAi.models.generateContent({
-      model:'gemini-2.0-flash',
+      model:'gemini-2.5-flash',
       contents:prompt
     })
     const explanationText = response.text.trim();
@@ -138,7 +134,7 @@ app.get("/process-tree",async(req,res)=>{
           const children = [];
           for (const log of data) {
               if (log.Extra?.ParentPid === pid) { // Check if the current log is a child of the target pid
-                  const parentNode = logMap.get(pid); // Ensure the child's start event is within the parent's start and stop
+                  const parentNode = logMap.get(pid); 
                   const parentStart = parentNode.start?.Timestamp;
                   const parentStop = parentNode.stop?.Timestamp;
 
@@ -186,6 +182,11 @@ console.log("Worker path:", workerPath);
 const anomalyWorker = new Worker(workerUrl);
 console.log("WebSocket server running on ws://localhost:8080");
 
+const historyBuffer = [];
+const MAX_HISTORY=100;
+let activeClient=null;
+let tail = null;
+
 
 anomalyWorker.on('message',(msg)=>{
   // if(msg.anomalies && activeClient?.readyState === WebSocket.OPEN){
@@ -229,45 +230,33 @@ function addToHistory(log){
 }
 
 function resetTailPosition(){
-  position=0;
-  buffer="";
-}
-
-async function readNewLines(filePath,onLine){
-  try {
-    const stats = await fs.promises.stat(filePath);
-
-    if (stats.size > position) {
-      const fd = await fs.promises.open(filePath, "r");
-      const { bytesRead, buffer: chunk } = await fd.read({
-        buffer: Buffer.alloc(stats.size - position),
-        position,
-      });
-      await fd.close();
-
-      position += bytesRead;
-      buffer += chunk.toString("utf8");
-
-      const lines = buffer.split("\n");
-      buffer = lines.pop() || ""; // keep partial line
-
-      for (const line of lines) {
-        if (!line.trim()) continue;
-        try {
-          onLine(JSON.parse(line));
-        } catch {
-          console.error("Failed to parse line:", line);
-        }
-      }
-    }
-  } catch (err) {
-    console.log("Waiting for log file...", err.message);
+  if(tail){
+    try { tail.quit(); } catch {}
+    tail = null;
   }
 }
 
+function tailFile(filePath, onLine) {
+  if(tail){
+    try{tail.quit();} catch {}
+  }
+  tail = new TailFile(filePath,{
+    startPos:0,
+    retryTimeout:100,
+  })
+  tail.pipe(split()).on('data',line=>{
+    if(!line.trim()) return;
+    try{
+      const json = JSON.parse(line);
+      onLine(json);
+    }catch(err){
+      console.error('Failed to parse JSON:',line)
+    }
+  }).on('error',err=>{
+    console.error('TailFile error:',err);
+  });
 
-function tailFile(filePath, onLine,interval=500) {
-  setInterval(()=>readNewLines(filePath,onLine),interval);
+  tail.start().catch(err=>console.error("Tail start failed:",err))
 }
 
 async function handleControlMessage(ws,data,dotnetProcess,logFilePath){
@@ -289,6 +278,10 @@ async function handleControlMessage(ws,data,dotnetProcess,logFilePath){
           await fs.promises.truncate(logFilePath, 0);
           console.log("Logs cleared");
           resetTailPosition();
+          // restart tailer fresh
+          setTimeout(()=>{
+            tailFile(logFilePath,onLineRef)
+          },150)
           ws.send(JSON.stringify({ type: "ACK", action: "CLEAR_LOGS" }));
           setTimeout(() => {
             dotnetProcess.stdin.write("START\n");
@@ -321,14 +314,20 @@ function setupWebSocketServer(wss,logFilePath,dotnetProcess){
       type:"history",
       data:historyBuffer
     }));
-    tailFile(logFilePath, (jsonLine) => {
+
+    const onLine = (jsonLine)=>{
       addToHistory(jsonLine);
       if (activeClient?.readyState === ws.OPEN) {
-        activeClient.send(JSON.stringify({type:"log",data:jsonLine}));
+        activeClient.send(JSON.stringify({
+          type: "log",
+          data: jsonLine
+        }));
       }
-      // console.log("[MAIN] Sending to worker:", jsonLine?.EventType, jsonLine?.ProcessName);
       anomalyWorker.postMessage(jsonLine);
-    });
+    }
+    global.onLineRef=onLine;
+    tailFile(logFilePath,onLine)
+    
     ws.on("message", (msg) => {
       try {
         const data = JSON.parse(msg.toString().trim());

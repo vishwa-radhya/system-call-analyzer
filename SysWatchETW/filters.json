@@ -1,6 +1,25 @@
-[{
-  "includePaths": ["C:\\users\\vishu\\testWatch"],
-  "excludePaths": ["C:\\Windows", "C:\\Program Files"],
-  "eventTypes": ["NetworkConnect","NetworkDisconnect","FileRead","FileWrite","FileRename", "ProcessStart","ProcessStop"]
-}]
-
+[
+  {
+    "includePaths": [
+      "C:\\users\\vishu\\testWatch",
+      "C:\\users\\vishu\\AppData\\Local\\Temp",
+      "C:\\users\\vishu\\Downloads",
+      "C:\\users\\vishu\\Desktop",
+      "C:\\users\\vishu\\Documents"
+    ],
+    "excludePaths": [
+      "C:\\Windows",
+      "C:\\Program Files",
+      "C:\\Program Files (x86)"
+    ],
+    "eventTypes": [
+      "NetworkConnect",
+      "NetworkDisconnect",
+      "FileRead",
+      "FileWrite",
+      "FileRename",
+      "ProcessStart",
+      "ProcessStop"
+    ]
+  }
+]
