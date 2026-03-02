@@ -68,7 +68,6 @@ export function evaluateRules(event) {
   if (!type || !rulesByType[type]) return { score, reasons };
 
   for (const rule of rulesByType[type]) {
-    // allow disabling noisy rules
     if (rule.enabled === false) continue;
 
     const matched =
@@ -80,7 +79,6 @@ export function evaluateRules(event) {
     const severityKey = (rule.severity || "medium").toLowerCase();
     const severityScore = BASE_SEVERITY[severityKey] ?? BASE_SEVERITY.medium;
 
-    // weight is a small fine-tuning factor, e.g. -2 .. +3
     const weightedScore = severityScore + (rule.weight || 0);
 
     score += weightedScore;

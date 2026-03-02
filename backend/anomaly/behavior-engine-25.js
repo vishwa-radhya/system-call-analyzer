@@ -21,24 +21,23 @@ const CONFIG = {
     NetworkConnect: 25
   },
 
-  // weights for composite normalized score
   WEIGHTS: {
     spawnRate: 0.3,
     netRate: 0.3,
     fileRate: 0.2,
-    diversity: 0.1,
-    burstiness: 0.1,
-    corr: 0.5 // correlation is very important
+    diversity: 0.1, // types of acts process performs, net+file+proc
+    burstiness: 0.1, // how fast
+    corr: 0.5  // correalte between those 3
   },
 
-  MAX_SCORE: 10,   // new compact scoring
-  MIN_ANOMALY: 3,  // only trigger meaningful alerts
+  MAX_SCORE: 10,   
+  MIN_ANOMALY: 3,  
 };
 
 function ensureProcess(name) {
   if (!processStats.has(name)) {
     processStats.set(name, {
-      events: {}, // { EventType: [ts] }
+      events: {}, 
       lastSeen: Date.now()
     });
   }
@@ -51,7 +50,6 @@ function recordEvent(stats, type) {
   stats.events[type].push(now);
   stats.lastSeen = now;
 
-  // prune
   stats.events[type] = stats.events[type].filter(
     ts => now - ts <= CONFIG.WINDOW_MS
   );
@@ -84,22 +82,20 @@ function corr(stats) {
   const creates = (e.FileCreate?.length || 0) > CONFIG.THRESHOLDS.FileCreate;
   const net = (e.NetworkConnect?.length || 0) > CONFIG.THRESHOLDS.NetworkConnect;
 
-  // Dropper / unpacker
+  //  unpacker (create new process and files)
   if (spawn && creates) return 1.0;
 
-  // Staged exfiltration (drop + beacon)
+  // staged exfiltration (create files then connect to network)
   if (creates && net) return 0.95;
 
-  // Typical exfil
+  // typical exfil (file write + network connect)
   if (writes && net) return 0.9;
 
-  // Beacon + spawning
   if (spawn && net) return 0.8;
 
   return 0;
 }
 
-// Composite 0–1 score
 function meta(v) {
   return (
     v.spawn * CONFIG.WEIGHTS.spawnRate +
@@ -111,7 +107,6 @@ function meta(v) {
   );
 }
 
-// ========================================
 
 export function evaluateBehavior(event) {
   const reasons = [];
@@ -122,7 +117,6 @@ export function evaluateBehavior(event) {
   const stats = ensureProcess(ProcessName);
   recordEvent(stats, EventType);
 
-  // compute metrics
   const v = {
     spawn: rate(stats, "ProcessStart"),
     net: rate(stats, "NetworkConnect"),
@@ -132,18 +126,13 @@ export function evaluateBehavior(event) {
     corr: corr(stats)
   };
 
-  // normalized score
   const raw = meta(v);
   const score = Math.floor(raw * CONFIG.MAX_SCORE);
 
-  // ===========================
-  // NOISE FILTER
-  // ===========================
   if (isNoisy(ProcessName)) {
     if (v.corr === 0) return { score: 0, reasons: [] };
   }
 
-  // only trigger significant anomalies
   if (
     score < CONFIG.MIN_ANOMALY ||
     (v.corr === 0 && v.burst < 0.2 && v.div < 0.2)
@@ -151,9 +140,6 @@ export function evaluateBehavior(event) {
     return { score: 0, reasons: [] };
   }
 
-  // ===========================
-  // meaningful anomaly detected
-  // ===========================
 
   const sev =
     score >= 8 ? "High" :
@@ -173,7 +159,6 @@ export function evaluateBehavior(event) {
   return { score, reasons };
 }
 
-// ========================================
 
 export function applyScoreDecay() {
   const now = Date.now();

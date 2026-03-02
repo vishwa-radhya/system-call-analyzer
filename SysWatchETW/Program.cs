@@ -8,7 +8,7 @@ class Program
     static StreamWriter? logStream;
     static void Main(string[] args)
     {
-        Console.OutputEncoding = System.Text.Encoding.UTF8; //ensuring stdout uses UTF-8 and flushes immediately
+        Console.OutputEncoding = System.Text.Encoding.UTF8;
         Console.WriteLine("[SysWatch] Initialized");
         Console.Out.Flush();
         //admin check
@@ -33,7 +33,7 @@ class Program
         {
             Console.WriteLine($"EventTypes: {string.Join(",", f.EventTypes ?? new List<string>())}");
         }
-        // open log stream for appending JSONL
+        
         logStream = new StreamWriter(new FileStream(logFile, FileMode.Append, FileAccess.Write, FileShare.ReadWrite)) { AutoFlush = true };
         // start ETW session
         using (var session = new TraceEventSession("SysWatchSession"))
@@ -44,6 +44,7 @@ class Program
             {
                 if (_isPaused) return;
                 pidNameMap[data.ProcessID] = data.ProcessName ?? "";
+                // Console.WriteLine(data);
                 var record = new SysEvent
                 {
                     Timestamp = data.TimeStamp,
@@ -288,16 +289,13 @@ class Program
         if (filter.EventTypes != null && filter.EventTypes.Count > 0 &&
             !filter.EventTypes.Contains(record.EventType, StringComparer.OrdinalIgnoreCase))
             return false;
-        // File event filtering (apply to all File* events)
         if (record.EventType.StartsWith("File", StringComparison.OrdinalIgnoreCase))
         {
-            // Exclude paths
             if (filter.ExcludePaths != null && filter.ExcludePaths.Count > 0 &&
                 record.FilePath != null &&
                 filter.ExcludePaths.Any(path => record.FilePath.StartsWith(path, StringComparison.OrdinalIgnoreCase)))
                 return false;
 
-            // Include paths (if defined,match at least one)
             if (filter.IncludePaths != null && filter.IncludePaths.Count > 0 &&
                 (record.FilePath == null ||
                 !filter.IncludePaths.Any(path => record.FilePath.StartsWith(path, StringComparison.OrdinalIgnoreCase))))

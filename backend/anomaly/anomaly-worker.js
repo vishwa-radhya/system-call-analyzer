@@ -38,13 +38,12 @@ let currentBatch = null;
 function vectorsSimilar(a, b) {
   const keys = ["spawn", "net", "file", "div", "burst", "corr"];
 
-  // Detect spawn-only pattern (no file, no net, no corr)
   const aSpawnOnly = (a.net === 0 && a.file === 0 && a.corr === 0);
   const bSpawnOnly = (b.net === 0 && b.file === 0 && b.corr === 0);
 
   const threshold = (aSpawnOnly && bSpawnOnly)
-    ? 0.35     // can handle spawn=0.5,0.67,0.83,1.00
-    : 0.15;    // strict for multi-signal anomalies
+    ? 0.35    
+    : 0.15;    
 
   return keys.every(k => Math.abs(a[k] - b[k]) < threshold);
 }
@@ -56,7 +55,6 @@ function flushBatch() {
   const avg = {};
   const keys = ["spawn","net","file","div","burst","corr"];
 
-  // compute averages
   for (const k of keys) {
     avg[k] = currentBatch.sum[k] / currentBatch.count;
   }
@@ -90,7 +88,6 @@ function addToBatch(process, severity, vector, reasons) {
   ) {
     flushBatch();
 
-    // start new batch
     currentBatch = {
       process,
       severity,
@@ -103,11 +100,9 @@ function addToBatch(process, severity, vector, reasons) {
       maxSeverity:severity
     };
   } else {
-    // add into existing batch
     currentBatch.count++;
     currentBatch.last = now;
 
-    // accumulate scores
     for (const k in vector) {
       currentBatch.sum[k] += vector[k];
     }

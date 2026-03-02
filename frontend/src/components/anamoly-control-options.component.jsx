@@ -11,7 +11,7 @@ const AnamolyControlOptions = ({isAnomalyAnalyzerOpen,setIsAnomalyAnalyzerOpen})
     return ( 
         <Fragment>
             <OptionButton Icon={Trash} text='Clear' handleClick={handleClearAnomalyLogs} />
-            <OptionButton Icon={isAnomalyAnalyzerOpen ? X : LayoutPanelLeft} text={'Anomaly analyzer'} handleClick={()=>setIsAnomalyAnalyzerOpen(!isAnomalyAnalyzerOpen)} />
+            {/* <OptionButton Icon={isAnomalyAnalyzerOpen ? X : LayoutPanelLeft} text={'Anomaly analyzer'} handleClick={()=>setIsAnomalyAnalyzerOpen(!isAnomalyAnalyzerOpen)} /> */}
         </Fragment>
      );
 }
